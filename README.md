@@ -18,3 +18,78 @@
 ## To Be Supplemented
 
 WebSocket: [Resource](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
+
+## Architecture
+
+  ┌─────────────────────────────────────────────────────┐
+  │                    Tomcat Server                    │
+  │ ┌─────────────────────────────────────────────────┐ │
+  │ │                     Service                     │ │
+  │ │                 ┌─────────────────────────────┐ │ │
+  │ │                 │           Engine            │ │ │
+  │ │                 │ ┌─────────────────────┐     │ │ │
+  │ │                 │ │        Host         │     │ │ │
+  │ │ ┌───────────┐   │ │ ┌───────────────────┴─┐   │ │ │
+  │ │ │Connectors │   │ │ │        Host         │   │ │ │
+  │ │ │┌─────────┐│   │ │ │ ┌───────────────────┴─┐ │ │ │
+  │ │ ││Connector││   │ │ │ │        Host         │ │ │ │
+  │ │ │└─────────┘│   │ │ │ │ ┌─────────────┐     │ │ │ │
+  │ │ │┌─────────┐│   │ │ │ │ │   Context   │     │ │ │ │
+◀─┼─┼▶││Connector││◀─▶│ │ │ │ │ ┌───────────┴─┐   │ │ │ │
+  │ │ │└─────────┘│   │ │ │ │ │ │   Context   │   │ │ │ │
+  │ │ │┌─────────┐│   │ │ │ │ │ │ ┌───────────┴─┐ │ │ │ │
+  │ │ ││Connector││   │ │ │ │ └─┤ │   Context   │ │ │ │ │
+  │ │ │└─────────┘│   │ └─┤ │   │ │ ┌─────────┐ │ │ │ │ │
+  │ │ └───────────┘   │   │ │   └─┤ │ Web App │ │ │ │ │ │
+  │ │                 │   └─┤     │ └─────────┘ │ │ │ │ │
+  │ │                 │     │     └─────────────┘ │ │ │ │
+  │ │                 │     └─────────────────────┘ │ │ │
+  │ │                 └─────────────────────────────┘ │ │
+  │ └─────────────────────────────────────────────────┘ │
+  └─────────────────────────────────────────────────────┘
+
+It contains one or multiple services, and it normally has one. The service has two components:
+
+- Connectors: single or multiple connectors are defined, e.g., two connectors for HTTP and HTTPS.
+- Engine: all requests are passed to Engine after Connector.
+
+One Engine contains multiple Host, and in the Host, there are few Contexts which is corresponding one Web App.
+
+An HTTP request to the host: `www.example.com/abc`:
+
+- `www.example.com`: one host
+- `\`: the root of the web app
+- `\abc`: The prefix is located in one Context
+
+But for Mini-Tomcat, we simplify it to:
+
+- Only one HTTP Connector
+- Does not support HTTPS
+- Only supports mounting to a single Context
+- Does not support multiple Hosts and multiple Contexts
+
+  ┌───────────────────────────────┐
+  │       Mini-Tomcat Server      │
+  │                 ┌───────────┐ │
+  │  ┌─────────┐    │  Context  │ │
+  │  │  HTTP   │    │┌─────────┐│ │
+◀─┼─▶│Connector│◀──▶││ Web App ││ │
+  │  └─────────┘    │└─────────┘│ │
+  │                 └───────────┘ │
+  └───────────────────────────────┘
+
+We can run multiple Servers instead of multiple Apps. Meanwhile, Nginx can replace the HTTPS feature of the Connector, so that we can focus on the essential features of Mini-Tomcat:
+
+               ┌───────────────────────────────┐
+               │       Mini-Tomcat Server      │
+               │ ┌─────────────────────────────┴─┐
+               │ │       Mini-Tomcat Server      │
+    ┌───────┐  │ │ ┌─────────────────────────────┴─┐
+    │       │◀─┼─│ │       Mini-Tomcat Server      │
+    │       │  │ │ │                 ┌───────────┐ │
+◀──▶│ Nginx │◀─┼─┼─│  ┌─────────┐    │  Context  │ │
+    │       │  └─┤ │  │  HTTP   │    │┌─────────┐│ │
+    │       │◀───┼─┼─▶│Connector│◀──▶││ Web App ││ │
+    └───────┘    └─┤  └─────────┘    │└─────────┘│ │
+                   │                 └───────────┘ │
+                   └───────────────────────────────┘
