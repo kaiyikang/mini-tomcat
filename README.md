@@ -93,3 +93,26 @@ We can run multiple Servers instead of multiple Apps. Meanwhile, Nginx can repla
     └───────┘    └─┤  └─────────┘    │└─────────┘│ │
                    │                 └───────────┘ │
                    └───────────────────────────────┘
+
+## Servlet
+
+Java Web applications are always packaged into `.war` files, which can be loaded by Tomcat, Jetty, and other Web Servers, and are compiled according to the Java EE (Jakarta EE) specification.
+
+  ┌─────────────────┐
+  │     Web App     │
+  └─────────────────┘
+           ▲
+           │
+           ▼
+  ┌─────────────────┐
+┌─┤Servlet Interface├─┐
+│ └─────────────────┘ │
+│          ▲          │
+│          │          │
+│          ▼          │
+│ ┌─────────────────┐ │
+│ │     Servlet     │ │
+│ │ Implementation  │ │
+│ └─────────────────┘ │
+│       Server        │
+└─────────────────────┘
