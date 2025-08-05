@@ -4,5 +4,8 @@
     "kaiyikang",
     "logback",
     "minitomcat"
-  ]
+  ],
+  "editor.accessibilitySupport": "off",
+  "editor.parameterHints.enabled": false,
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
 }
