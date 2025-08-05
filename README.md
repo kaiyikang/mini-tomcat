@@ -128,8 +128,11 @@ Java Web applications are always packaged into `.war` files, which can be loaded
 │ └─────────────────┘ │
 │       Server        │
 └─────────────────────┘
-
 ```
+
+### Servlet Server
+
+The Servlet Server is based on the `HttpServletRequest` and `HttpServletResponse` interface to handle HTTP. We can use the [Adapter Pattern](https://www.baeldung.com/java-adapter-pattern) to adapt the HttpExchange for a new one.
 
 ## Milestone
 
