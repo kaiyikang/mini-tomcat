@@ -1,6 +1,6 @@
 # Compiled class file
 *.class
-*.lst
+target/
 
 # Log file
 *.log
