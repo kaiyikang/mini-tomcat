@@ -2,6 +2,8 @@
 
 [Resource](https://liaoxuefeng.com/books/jerrymouse/introduction/index.html)
 
+All diagram come from this tutorial resource.
+
 ## Targeted Features
 
 - Support most features of Servlet 6
@@ -21,6 +23,7 @@ WebSocket: [Resource](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
 
 ## Architecture
 
+```
   ┌─────────────────────────────────────────────────────┐
   │                    Tomcat Server                    │
   │ ┌─────────────────────────────────────────────────┐ │
@@ -48,6 +51,8 @@ WebSocket: [Resource](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
   │ └─────────────────────────────────────────────────┘ │
   └─────────────────────────────────────────────────────┘
 
+```
+
 It contains one or multiple services, and it normally has one. The service has two components:
 
 - Connectors: single or multiple connectors are defined, e.g., two connectors for HTTP and HTTPS.
@@ -68,8 +73,9 @@ But for Mini-Tomcat, we simplify it to:
 - Only supports mounting to a single Context
 - Does not support multiple Hosts and multiple Contexts
 
+```
   ┌───────────────────────────────┐
-  │       Mini-Tomcat Server      │
+  │       minitomcat Server       │
   │                 ┌───────────┐ │
   │  ┌─────────┐    │  Context  │ │
   │  │  HTTP   │    │┌─────────┐│ │
@@ -78,14 +84,17 @@ But for Mini-Tomcat, we simplify it to:
   │                 └───────────┘ │
   └───────────────────────────────┘
 
+```
+
 We can run multiple Servers instead of multiple Apps. Meanwhile, Nginx can replace the HTTPS feature of the Connector, so that we can focus on the essential features of Mini-Tomcat:
 
+```
                ┌───────────────────────────────┐
-               │       Mini-Tomcat Server      │
+               │       mini-tomcat Server      │
                │ ┌─────────────────────────────┴─┐
-               │ │       Mini-Tomcat Server      │
+               │ │       mini-tomcat Server      │
     ┌───────┐  │ │ ┌─────────────────────────────┴─┐
-    │       │◀─┼─│ │       Mini-Tomcat Server      │
+    │       │◀─┼─│ │       mini-tomcat Server      │
     │       │  │ │ │                 ┌───────────┐ │
 ◀──▶│ Nginx │◀─┼─┼─│  ┌─────────┐    │  Context  │ │
     │       │  └─┤ │  │  HTTP   │    │┌─────────┐│ │
@@ -94,10 +103,13 @@ We can run multiple Servers instead of multiple Apps. Meanwhile, Nginx can repla
                    │                 └───────────┘ │
                    └───────────────────────────────┘
 
+```
+
 ## Servlet
 
 Java Web applications are always packaged into `.war` files, which can be loaded by Tomcat, Jetty, and other Web Servers, and are compiled according to the Java EE (Jakarta EE) specification.
 
+```
   ┌─────────────────┐
   │     Web App     │
   └─────────────────┘
@@ -116,3 +128,5 @@ Java Web applications are always packaged into `.war` files, which can be loaded
 │ └─────────────────┘ │
 │       Server        │
 └─────────────────────┘
+
+```
