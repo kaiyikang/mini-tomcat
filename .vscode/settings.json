@@ -1,11 +1,7 @@
 {
-  "java.configuration.updateBuildConfiguration": "interactive",
-  "cSpell.words": [
-    "kaiyikang",
-    "logback",
-    "minitomcat"
-  ],
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "cSpell.words": ["kaiyikang", "logback", "minitomcat"],
   "editor.accessibilitySupport": "off",
   "editor.parameterHints.enabled": false,
-  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "editor.suggest.snippetsPreventQuickSuggestions": false
 }
