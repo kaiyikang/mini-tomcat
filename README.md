@@ -134,7 +134,39 @@ Java Web applications are always packaged into `.war` files, which can be loaded
 
 The Servlet Server is based on the `HttpServletRequest` and `HttpServletResponse` interface to handle HTTP. We can use the [Adapter Pattern](https://www.baeldung.com/java-adapter-pattern) to adapt the HttpExchange for a new one.
 
+Now that we have our `HttpExchangeAdapter`, we can build `HttpServletRequestImpl` and `HttpServletResponseImpl` to handle requests and responses.
+
+The `HttpServletRequestImpl` and `HttpServletResponseImpl` will both use the `HttpExchange` instance which was adapted by `HttpExchangeAdapter`. This lets them easily access and work with the request and response data.
+
+```
+                      ┌───────────────┐
+         ┌────────────┼ HttpConnector ┼─────────┐
+         │            └──────┬────────┘         │
+         │                   │                  │
+┌────────▼───────────┐       │        ┌─────────▼───────────┐
+│ HttpServletRequest │       │        │ HttpServletResponse │
+└────────┬───────────┘       │        └─────────┬───────────┘
+         │                   │                  │
+┌────────▼────────────┐      │       ┌──────────▼───────────┐
+│ HttpExchangeRequest │      │       │ HttpExchangeResponse │
+└────────┬────────────┘      │       └──────────┬───────────┘
+         │                   │                  │
+         │        ┌──────────▼──────────┐       │
+         └───────►│ HttpExchangeAdapter │◄──────┘
+                  └─────────▲───────────┘
+                            │
+                     ┌──────┼───────┐
+                     │ HttpExchange │
+                     └──────────────┘
+```
+
+Following the conversion of our `HttpExchange` to standard `ServletRequest` and `ServletResponse` objects, we now invoke the `process(req, resp)` method to handle the incoming request.
+
+This core `process(req, resp)` method is ideally situated within the `ServletContext`. As defined by the Servlet specification, the `ServletContext` provides a central point for managing key components of a web application, including `Servlets`, `Filters`, and `Listeners`, etc.
+
 ## Milestone
 
 1. SimpleHttpServer done
 2. ServletServer done
+3. Servlet Module
+   1. Servlet Context
