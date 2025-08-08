@@ -164,6 +164,13 @@ Following the conversion of our `HttpExchange` to standard `ServletRequest` and 
 
 This core `process(req, resp)` method is ideally situated within the `ServletContext`. As defined by the Servlet specification, the `ServletContext` provides a central point for managing key components of a web application, including `Servlets`, `Filters`, and `Listeners`, etc.
 
+### Servlet Context
+
+`ServletContext` is the environment of execution of a web app and one web app is only corresponding to one context. It can be used:
+
+- Initialization and global configuration
+- Share global data
+
 ## Milestone
 
 1. SimpleHttpServer done
