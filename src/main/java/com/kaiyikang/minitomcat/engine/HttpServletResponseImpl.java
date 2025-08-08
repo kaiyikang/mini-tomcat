@@ -2,6 +2,7 @@ package com.kaiyikang.minitomcat.engine;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Locale;
 
@@ -25,9 +26,14 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public void addHeader(String name, String value) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addHeader'");
+    public void setContentType(String type) {
+        setHeader("Content-Type", type);
+    }
+
+    @Override
+    public PrintWriter getWriter() throws IOException {
+        this.exchangeResponse.sendResponseHeaders(200, 0);
+        return new PrintWriter(this.exchangeResponse.getResponseBody(), true, StandardCharsets.UTF_8);
     }
 
     // ========= Not implement yet =========
@@ -51,12 +57,6 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public PrintWriter getWriter() throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getWriter'");
-    }
-
-    @Override
     public void setCharacterEncoding(String charset) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'setCharacterEncoding'");
@@ -75,8 +75,9 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public void setContentType(String type) {
-        setHeader("Content-Type", type);
+    public void addHeader(String name, String value) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'addHeader'");
     }
 
     @Override
