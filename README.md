@@ -137,4 +137,4 @@ The Servlet Server is based on the `HttpServletRequest` and `HttpServletResponse
 ## Milestone
 
 1. SimpleHttpServer done
-2. ServletServer ...
+2. ServletServer done
