@@ -73,7 +73,7 @@ public class ServletContextImpl implements ServletContext {
             if (ws != null) {
                 logger.info("auto register @WebServlet: {}", servletClass.getName());
                 @SuppressWarnings("unchecked")
-                Class<? extends WebServlet> clazz = (Class<? extends WebServlet>) servletClass;
+                Class<? extends Servlet> clazz = (Class<? extends Servlet>) servletClass;
                 ServletRegistration.Dynamic registration = this.addServlet(AnnoUtils.getServletName(clazz), clazz);
                 registration.addMapping(AnnoUtils.getServletUrlPattern(clazz));
                 registration.setInitParameter(AnnoUtils.getServletInitParams(clazz));
