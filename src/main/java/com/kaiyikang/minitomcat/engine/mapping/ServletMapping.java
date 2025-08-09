@@ -4,7 +4,7 @@ import jakarta.servlet.Servlet;
 
 public class ServletMapping extends AbstractMapping {
 
-    final Servlet servlet;
+    public final Servlet servlet;
 
     public ServletMapping(String urlPattern, Servlet servlet) {
         super(urlPattern);

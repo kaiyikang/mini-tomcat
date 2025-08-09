@@ -2,10 +2,13 @@ package com.kaiyikang.minitomcat.engine;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.http.WebSocket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.HashMap;
@@ -17,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.kaiyikang.minitomcat.engine.mapping.ServletMapping;
+import com.kaiyikang.minitomcat.engine.ServletRegistrationImpl;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterRegistration;
@@ -26,6 +30,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRegistration;
 import jakarta.servlet.ServletRegistration.Dynamic;
+import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.SessionCookieConfig;
 import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
@@ -43,11 +48,47 @@ public class ServletContextImpl implements ServletContext {
     final List<ServletMapping> servletMappings = new ArrayList<>();
 
     public void process(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+        String uri = request.getRequestURI();
+        Servlet servlet = null;
+        for (ServletMapping mapping : this.servletMappings) {
+            if (mapping.matches(uri)) {
+                servlet = mapping.servlet;
+                break;
+            }
+        }
+        if (servlet == null) {
+            PrintWriter pm = response.getWriter();
+            pm.write("<h1>404 Not Found</h1> <p>No mapping for URL: " + uri + "</p>");
+            pm.close();
+            return;
+        }
 
+        servlet.service(request, response);
     }
 
     public void initialize(List<Class<?>> servletClasses) {
-        // TODO
+        // Load the servlet classes
+        for (Class<?> servletClass : servletClasses) {
+            WebServlet ws = servletClass.getAnnotation(WebServlet.class);
+            if (ws != null) {
+                logger.info("auto register @WebServlet: {}", servletClass.getName());
+                @SuppressWarnings("unchecked")
+                Class<? extends WebServlet> clazz = (Class<? extends WebServlet>) servletClass;
+                ServletRegistration.Dynamic registration = this.addServlet(AnnoUtils.getServletName(clazz), clazz);
+                registration.addMapping(AnnoUtils.getServletUrlPattern(clazz));
+                registration.setInitParameter(AnnoUtils.getServletInitParams(clazz));
+            }
+        }
+        // Init servlet
+        for (String name : this.servletRegisterations.keySet()) {
+            var registration = this.servletRegisterations.get(name);
+            try {
+
+            } catch (ServletException e) {
+                logger.error("init servlet failed: " + name + " / " + registration.servlet.getClass().getName(), e);
+            }
+        }
+        Collections.sort(this.servletMappings);
     }
 
     @Override
@@ -82,20 +123,37 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Dynamic addServlet(String servletName, String className) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addServlet'");
+        if (className.isBlank()) {
+            // or className == null || className.isEmpty()
+            throw new IllegalArgumentException("class name is null or empty.");
+        }
+        Servlet servlet = null;
+        try {
+            Class<? extends Servlet> clazz = createInstance(className);
+            servlet = createInstance(clazz);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        return addServlet(servletName, servlet);
+
     }
 
     @Override
     public Dynamic addServlet(String servletName, Servlet servlet) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addServlet'");
+        if (servletName == null) {
+            throw new IllegalArgumentException("name is null.");
+        }
+        if (servlet == null) {
+            throw new IllegalArgumentException("servlet is null,");
+        }
+        var registration = new ServletRegistrationImpl(this, servletName, servlet);
+        this.servletRegisterations.put(servletName, registration);
+        return registration;
     }
 
     @Override
     public Dynamic addServlet(String servletName, Class<? extends Servlet> servletClass) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addServlet'");
+
     }
 
     @Override
