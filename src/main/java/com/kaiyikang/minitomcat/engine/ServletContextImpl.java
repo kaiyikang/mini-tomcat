@@ -81,7 +81,7 @@ public class ServletContextImpl implements ServletContext {
             }
         }
 
-        // Init servlet
+        // Init all servlets
         for (String name : this.servletRegisterations.keySet()) {
             var registration = this.servletRegisterations.get(name);
             try {
