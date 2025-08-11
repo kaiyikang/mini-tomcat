@@ -166,17 +166,23 @@ This core `process(req, resp)` method is ideally situated within the `ServletCon
 
 ### Servlet Context
 
-最初的请求，首先由`HttpConnector`接收，在 `constructor` 中，我们加载了已经提前定义好的`servletClass`。随后，我们初始化核心的`ServletContextImpl`并且传递`servletClass`。
+#### Request Handling and Server Initialization
 
-随后我们启动服务器，通过提前定义好的`handle`函数，我们将拆除经过封装的请求和返回`HttpExchange`，拆除后的请求是满足`HttpServletRequest`接口的`HttpServletRequestImpl`，以及满足`HttpServletResponse`接口的`HttpServletResponseImpl`。转换的过程是通过`HttpExchangeAdapter` 完成的。
+The initial request is first received by the `HttpConnector`. Within its constructor, we load a predefined list of servlet classes (`servletClass`). Subsequently, we initialize the core `ServletContextImpl` and pass this list of servlet classes to it.
 
-完成转换后，我们将标准的请求和返回给到`servletContext.process`方法。
+Next, the server is started. Incoming requests are processed by a predefined `handle` method, which unwraps the `HttpExchange` object provided by the underlying HTTP server. This unwrapping process yields a request object, `HttpServletRequestImpl`, which implements the standard `HttpServletRequest` interface, and a response object, `HttpServletResponseImpl`, which implements the `HttpServletResponse` interface. This conversion is managed by the `HttpExchangeAdapter`.
 
-初始化context的时候，即调用`ServletContextImpl.initialize`时，我们应加载并初始化定义好的servletClass。当加载的时候，额外的步骤是引入`ServletRegistration.Dynamic`，一个`registeration` 对应着一个`servlet`。原因是，它可以摆脱web.xml的配置，实现了运行时动态修改Servlet配置的能力。
+Once the conversion is complete, the standard request and response objects are passed to the `servletContext.process()` method for further handling.
 
-初始化已经加载的servletClass，也需要`registeration`的参与，并且我们还需要额外维护一个`servletMappings`的字典，保存好`urlPattern` 和对应的`servlet`,前者应该在每一个自定义的servlet前定义，类似于`@WebServlet(urlPatterns = "/hello")`,这样当用户输入网址的时候，minitomcat可以根据pattern选择特定的规则进行匹配（这里使用的是哪个长度短，选择哪个）。
+#### Servlet Initialization and Dynamic Registration
 
-`Context`中的执行步骤逻辑较为简单，使用`servletMappings`获得匹配的servlet，然后调用`servlet.service(request, response)`以处理请求和返回。
+During the context's initialization phase, specifically when `ServletContextImpl.initialize()` is called, we load and instantiate the predefined servlet classes. A critical step in this process is the use of `ServletRegistration.Dynamic`. Each servlet is associated with a corresponding `ServletRegistration` instance. The primary advantage of this approach is that it eliminates the need for a `web.xml` deployment descriptor, enabling the ability to dynamically configure servlets at runtime.
+
+The `ServletRegistration` is also involved in the initialization of each loaded servlet class. Additionally, we maintain a `servletMappings` map, which stores the relationship between a `urlPattern` and its corresponding servlet instance. The URL pattern for each servlet should be defined using an annotation, such as `@WebServlet(urlPatterns = "/hello")`, on the custom servlet class. This allows the Mini-Tomcat server to select the appropriate servlet by matching the request's URL against these patterns. The matching logic here prioritizes shorter patterns (e.g., the servlet with the shorter matching URL pattern is selected).
+
+#### Request Processing within the Context
+
+The execution logic within the `Context` is straightforward. It uses the `servletMappings` to find the servlet that matches the incoming request's URL. Once the appropriate servlet is identified, its `service(request, response)` method is invoked to process the request and generate the response.
 
 ## Milestone
 
