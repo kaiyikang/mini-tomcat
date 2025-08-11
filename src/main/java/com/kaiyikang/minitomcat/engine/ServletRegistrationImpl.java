@@ -55,36 +55,39 @@ public class ServletRegistrationImpl implements ServletRegistration.Dynamic {
         };
     }
 
-    // ===== Not Implemented Yet =====
+    @Override
+    public String getName() {
+        return this.name;
+    }
+
+    @Override
+    public String getClassName() {
+        return servlet.getClass().getName();
+    }
 
     @Override
     public Set<String> addMapping(String... urlPatterns) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addMapping'");
+        if (urlPatterns == null || urlPatterns.length == 0) {
+            throw new IllegalArgumentException("Missing urlPatterns");
+        }
+
+        for (String urlPattern : urlPatterns) {
+            this.urlPatterns.add(urlPattern);
+        }
+        return Set.of();
     }
 
     @Override
     public Collection<String> getMappings() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getMappings'");
+        return this.urlPatterns;
     }
+
+    // ===== Not Implemented Yet =====
 
     @Override
     public String getRunAsRole() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getRunAsRole'");
-    }
-
-    @Override
-    public String getName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getName'");
-    }
-
-    @Override
-    public String getClassName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getClassName'");
     }
 
     @Override
