@@ -174,6 +174,18 @@ Next, the server is started. Incoming requests are processed by a predefined `ha
 
 Once the conversion is complete, the standard request and response objects are passed to the `servletContext.process()` method for further handling.
 
+```
+                     ┌────────────────────┐
+                     │   ServletContext   │
+                     ├────────────────────┤
+                     │     ┌────────────┐ │
+    ┌─────────────┐  │ ┌──▶│IndexServlet│ │
+───▶│HttpConnector│──┼─┤   ├────────────┤ │
+    └─────────────┘  │ └──▶│HelloServlet│ │
+                     │     └────────────┘ │
+                     └────────────────────┘
+```
+
 #### Servlet Initialization and Dynamic Registration
 
 During the context's initialization phase, specifically when `ServletContextImpl.initialize()` is called, we load and instantiate the predefined servlet classes. A critical step in this process is the use of `ServletRegistration.Dynamic`. Each servlet is associated with a corresponding `ServletRegistration` instance. The primary advantage of this approach is that it eliminates the need for a `web.xml` deployment descriptor, enabling the ability to dynamically configure servlets at runtime.
