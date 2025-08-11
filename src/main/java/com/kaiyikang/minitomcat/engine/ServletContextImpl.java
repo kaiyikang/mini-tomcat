@@ -100,31 +100,35 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getContextPath() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getContextPath'");
+        // Only support root context path
+        return "";
     }
 
     @Override
     public String getMimeType(String file) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getMimeType'");
+        String defaultMime = "application/octet-stream";
+        Map<String, String> mimes = Map.of(".html", "text/html", ".txt", "text/plain", ".png", "image/png", ".jpg",
+                "image/jpeg");
+        int n = file.lastIndexOf(".");
+        if (n == -1) {
+            return defaultMime;
+        }
+        String ext = file.substring(n);
+        return mimes.getOrDefault(ext, defaultMime);
     }
 
     @Override
     public String getInitParameter(String name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getInitParameter'");
+        return null;
     }
 
     @Override
     public Enumeration<String> getInitParameterNames() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getInitParameterNames'");
+        return Collections.emptyEnumeration();
     }
 
     @Override
     public boolean setInitParameter(String name, String value) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'setInitParameter'");
     }
 
@@ -177,44 +181,37 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends Servlet> T createServlet(Class<T> clazz) throws ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'createServlet'");
+        return createInstance(clazz);
     }
 
     @Override
     public ServletRegistration getServletRegistration(String servletName) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServletRegistration'");
+        return this.servletRegisterations.get(servletName);
     }
 
     @Override
     public Map<String, ? extends ServletRegistration> getServletRegistrations() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServletRegistrations'");
+        return Map.copyOf(this.servletRegisterations);
     }
 
     @Override
     public int getMajorVersion() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getMajorVersion'");
+        return 6;
     }
 
     @Override
     public int getMinorVersion() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getMinorVersion'");
+        return 0;
     }
 
     @Override
     public int getEffectiveMajorVersion() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getEffectiveMajorVersion'");
+        return 6;
     }
 
     @Override
     public int getEffectiveMinorVersion() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getEffectiveMinorVersion'");
+        return 0;
     }
 
     private <T> T createInstance(String className) throws ServletException {
