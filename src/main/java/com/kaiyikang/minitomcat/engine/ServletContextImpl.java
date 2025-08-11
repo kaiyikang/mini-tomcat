@@ -80,6 +80,7 @@ public class ServletContextImpl implements ServletContext {
                 registration.setInitParameters(AnnoUtils.getServletInitParams(clazz));
             }
         }
+
         // Init servlet
         for (String name : this.servletRegisterations.keySet()) {
             var registration = this.servletRegisterations.get(name);
