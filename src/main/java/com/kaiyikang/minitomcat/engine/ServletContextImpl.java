@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import com.kaiyikang.minitomcat.engine.mapping.ServletMapping;
 import com.kaiyikang.minitomcat.engine.ServletRegistrationImpl;
+import com.kaiyikang.minitomcat.utils.AnnoUtils;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterRegistration;
@@ -41,7 +42,7 @@ public class ServletContextImpl implements ServletContext {
 
     final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private Map<String, ServletRegistration> servletRegisterations = new HashMap<>();
+    private Map<String, ServletRegistrationImpl> servletRegisterations = new HashMap<>();
 
     private Map<String, Servlet> nameToServlets = new HashMap<>();
 
@@ -74,16 +75,21 @@ public class ServletContextImpl implements ServletContext {
                 logger.info("auto register @WebServlet: {}", servletClass.getName());
                 @SuppressWarnings("unchecked")
                 Class<? extends Servlet> clazz = (Class<? extends Servlet>) servletClass;
-                ServletRegistration.Dynamic registration = this.addServlet(AnnoUtils.getServletName(clazz), clazz);
-                registration.addMapping(AnnoUtils.getServletUrlPattern(clazz));
-                registration.setInitParameter(AnnoUtils.getServletInitParams(clazz));
+                Dynamic registration = this.addServlet(AnnoUtils.getServletName(clazz), clazz);
+                registration.addMapping(AnnoUtils.getServletUrlPatterns(clazz));
+                registration.setInitParameters(AnnoUtils.getServletInitParams(clazz));
             }
         }
         // Init servlet
         for (String name : this.servletRegisterations.keySet()) {
             var registration = this.servletRegisterations.get(name);
             try {
-
+                registration.servlet.init(registration.getServletConfig());
+                this.nameToServlets.put(name, registration.servlet);
+                for (String urlPattern : registration.getMappings()) {
+                    this.servletMappings.add(new ServletMapping(urlPattern, registration.servlet));
+                }
+                registration.initialized = true;
             } catch (ServletException e) {
                 logger.error("init servlet failed: " + name + " / " + registration.servlet.getClass().getName(), e);
             }
@@ -123,8 +129,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Dynamic addServlet(String servletName, String className) {
+
+        // or className == null || className.isEmpty()
         if (className.isBlank()) {
-            // or className == null || className.isEmpty()
             throw new IllegalArgumentException("class name is null or empty.");
         }
         Servlet servlet = null;
@@ -139,7 +146,23 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
+    public Dynamic addServlet(String servletName, Class<? extends Servlet> servletClass) {
+        if (servletClass == null) {
+            throw new IllegalArgumentException("class is null.");
+        }
+        Servlet servlet = null;
+        try {
+            servlet = createInstance(servletClass);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+
+        return addServlet(servletName, servlet);
+    }
+
+    @Override
     public Dynamic addServlet(String servletName, Servlet servlet) {
+        // Final step of addServlet: registration
         if (servletName == null) {
             throw new IllegalArgumentException("name is null.");
         }
@@ -149,11 +172,6 @@ public class ServletContextImpl implements ServletContext {
         var registration = new ServletRegistrationImpl(this, servletName, servlet);
         this.servletRegisterations.put(servletName, registration);
         return registration;
-    }
-
-    @Override
-    public Dynamic addServlet(String servletName, Class<? extends Servlet> servletClass) {
-
     }
 
     @Override
