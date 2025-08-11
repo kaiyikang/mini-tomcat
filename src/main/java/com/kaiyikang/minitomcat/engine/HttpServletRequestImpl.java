@@ -11,7 +11,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import com.kaiyikang.minitomcat.connector.HttpExchangeRequest;
 
@@ -37,6 +36,16 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     public HttpServletRequestImpl(HttpExchangeRequest exchangeRequest) {
         this.exchangeRequest = exchangeRequest;
+    }
+
+    @Override
+    public String getRequestURI() {
+        return exchangeRequest.getRequestURI().getPath();
+    }
+
+    @Override
+    public String getMethod() {
+        return exchangeRequest.getRequestMethod();
     }
 
     @Override
@@ -361,12 +370,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public String getMethod() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getMethod'");
-    }
-
-    @Override
     public Part getPart(String arg0) throws IOException, ServletException {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getPart'");
@@ -400,12 +403,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public String getRemoteUser() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getRemoteUser'");
-    }
-
-    @Override
-    public String getRequestURI() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRequestURI'");
     }
 
     @Override
