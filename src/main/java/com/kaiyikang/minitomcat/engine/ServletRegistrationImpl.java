@@ -87,60 +87,56 @@ public class ServletRegistrationImpl implements ServletRegistration.Dynamic {
     @Override
     public String getRunAsRole() {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRunAsRole'");
+        return null;
     }
 
     @Override
     public boolean setInitParameter(String name, String value) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setInitParameter'");
+        return false;
     }
 
     @Override
     public String getInitParameter(String name) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getInitParameter'");
+        return null;
     }
 
     @Override
     public Set<String> setInitParameters(Map<String, String> initParameters) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setInitParameters'");
+        return null;
     }
 
     @Override
     public Map<String, String> getInitParameters() {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getInitParameters'");
+        return null;
     }
 
     @Override
     public void setAsyncSupported(boolean isAsyncSupported) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setAsyncSupported'");
     }
 
     @Override
     public void setLoadOnStartup(int loadOnStartup) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setLoadOnStartup'");
     }
 
     @Override
     public Set<String> setServletSecurity(ServletSecurityElement constraint) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setServletSecurity'");
+        return null;
     }
 
     @Override
     public void setMultipartConfig(MultipartConfigElement multipartConfig) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setMultipartConfig'");
     }
 
     @Override
     public void setRunAsRole(String roleName) {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setRunAsRole'");
     }
 }

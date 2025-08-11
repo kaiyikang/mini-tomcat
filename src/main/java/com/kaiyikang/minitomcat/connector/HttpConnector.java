@@ -6,16 +6,23 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.sun.net.httpserver.HttpServer;
 
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import com.kaiyikang.minitomcat.engine.HttpServletRequestImpl;
 import com.kaiyikang.minitomcat.engine.HttpServletResponseImpl;
+import com.kaiyikang.minitomcat.engine.ServletContextImpl;
+import com.kaiyikang.minitomcat.engine.servlet.IndexServlet;
+import com.kaiyikang.minitomcat.engine.servlet.HelloServlet;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.slf4j.LoggerFactory;
@@ -26,8 +33,18 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
     final Logger logger = LoggerFactory.getLogger(getClass());
 
     final HttpServer httpServer;
+    final ServletContextImpl servletContext;
+    final Duration stopDisplay = Duration.ofSeconds(5);
 
     public HttpConnector() throws IOException {
+        // Define the classes
+        List<Class<? extends HttpServlet>> definedClasses = List.of(IndexServlet.class, HelloServlet.class);
+
+        // Initialize the servlets with claess
+        this.servletContext = new ServletContextImpl();
+        this.servletContext.initialize(definedClasses);
+
+        // Start Http Server
         String host = "0.0.0.0";
         int port = 8080;
         this.httpServer = HttpServer.create(new InetSocketAddress(host, port), 0, "/", this);
@@ -37,7 +54,7 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
 
     @Override
     public void close() {
-        this.httpServer.stop(3);
+        this.httpServer.stop((int) this.stopDisplay.toSeconds());
     }
 
     @Override
@@ -48,22 +65,10 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
         var request = new HttpServletRequestImpl(adaptor);
         var response = new HttpServletResponseImpl(adaptor);
         try {
-            process(request, response);
+            this.servletContext.process(request, response);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
     }
 
-    private void process(HttpServletRequest request, HttpServletResponse response)
-            throws IOException, ServletException {
-
-        String name = request.getParameter("name");
-        String html = "<h1>Hello " + (name == null ? "world" : name) + "</h1>";
-
-        response.setContentType("text/html");
-        try (PrintWriter pw = response.getWriter()) {
-            pw.write(html);
-        }
-
-    }
 }

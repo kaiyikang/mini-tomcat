@@ -35,6 +35,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.SessionCookieConfig;
 import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
+import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -51,12 +52,15 @@ public class ServletContextImpl implements ServletContext {
     public void process(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         String uri = request.getRequestURI();
         Servlet servlet = null;
+
+        // Find the matched servlet
         for (ServletMapping mapping : this.servletMappings) {
             if (mapping.matches(uri)) {
                 servlet = mapping.servlet;
                 break;
             }
         }
+
         if (servlet == null) {
             PrintWriter pm = response.getWriter();
             pm.write("<h1>404 Not Found</h1> <p>No mapping for URL: " + uri + "</p>");
@@ -67,7 +71,7 @@ public class ServletContextImpl implements ServletContext {
         servlet.service(request, response);
     }
 
-    public void initialize(List<Class<?>> servletClasses) {
+    public void initialize(List<Class<? extends HttpServlet>> servletClasses) {
         // Load the servlet classes
         for (Class<?> servletClass : servletClasses) {
             WebServlet ws = servletClass.getAnnotation(WebServlet.class);
