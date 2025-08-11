@@ -6,7 +6,6 @@ import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.http.WebSocket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -20,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.kaiyikang.minitomcat.engine.mapping.ServletMapping;
-import com.kaiyikang.minitomcat.engine.ServletRegistrationImpl;
 import com.kaiyikang.minitomcat.utils.AnnoUtils;
 
 import jakarta.servlet.Filter;

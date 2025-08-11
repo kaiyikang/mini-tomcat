@@ -166,14 +166,21 @@ This core `process(req, resp)` method is ideally situated within the `ServletCon
 
 ### Servlet Context
 
-`ServletContext` is the environment of execution of a web app and one web app is only corresponding to one context. It can be used:
+最初的请求，首先由`HttpConnector`接收，在 `constructor` 中，我们加载了已经提前定义好的`servletClass`。随后，我们初始化核心的`ServletContextImpl`并且传递`servletClass`。
 
-- Initialization and global configuration
-- Share global data
+随后我们启动服务器，通过提前定义好的`handle`函数，我们将拆除经过封装的请求和返回`HttpExchange`，拆除后的请求是满足`HttpServletRequest`接口的`HttpServletRequestImpl`，以及满足`HttpServletResponse`接口的`HttpServletResponseImpl`。转换的过程是通过`HttpExchangeAdapter` 完成的。
+
+完成转换后，我们将标准的请求和返回给到`servletContext.process`方法。
+
+初始化context的时候，即调用`ServletContextImpl.initialize`时，我们应加载并初始化定义好的servletClass。当加载的时候，额外的步骤是引入`ServletRegistration.Dynamic`，一个`registeration` 对应着一个`servlet`。原因是，它可以摆脱web.xml的配置，实现了运行时动态修改Servlet配置的能力。
+
+初始化已经加载的servletClass，也需要`registeration`的参与，并且我们还需要额外维护一个`servletMappings`的字典，保存好`urlPattern` 和对应的`servlet`,前者应该在每一个自定义的servlet前定义，类似于`@WebServlet(urlPatterns = "/hello")`,这样当用户输入网址的时候，minitomcat可以根据pattern选择特定的规则进行匹配（这里使用的是哪个长度短，选择哪个）。
+
+`Context`中的执行步骤逻辑较为简单，使用`servletMappings`获得匹配的servlet，然后调用`servlet.service(request, response)`以处理请求和返回。
 
 ## Milestone
 
 1. SimpleHttpServer done
-2. ServletServer done
+2. ServletServer 2025.08.08 done
 3. Servlet Module
-   1. Servlet Context
+   1. Servlet Context 2025.08.11 done
