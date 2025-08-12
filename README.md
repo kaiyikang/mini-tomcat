@@ -196,9 +196,38 @@ The `ServletRegistration` is also involved in the initialization of each loaded 
 
 The execution logic within the `Context` is straightforward. It uses the `servletMappings` to find the servlet that matches the incoming request's URL. Once the appropriate servlet is identified, its `service(request, response)` method is invoked to process the request and generate the response.
 
+## FilterChain
+
+```
+  ┌─────────────────┐
+  │ ServletContext  │
+  │ ┌ ─ ─ ─ ─ ─ ─ ┐ │
+  │   FilterChain   │
+  │ │ ┌─────────┐ │ │
+──┼──▶│ Filter  │   │
+  │ │ └─────────┘ │ │
+  │        │        │
+  │ │      ▼      │ │
+  │   ┌─────────┐   │
+  │ │ │ Filter  │ │ │
+  │   └─────────┘   │
+  │ │      │      │ │
+  │        ▼        │
+  │ │ ┌─────────┐ │ │
+  │   │ Filter  │   │
+  │ │ └─────────┘ │ │
+  │  ─ ─ ─ ┬ ─ ─ ─  │
+  │        ▼        │
+  │   ┌─────────┐   │
+  │   │ Servlet │   │
+  │   └─────────┘   │
+  └─────────────────┘
+```
+
 ## Milestone
 
 1. SimpleHttpServer done
 2. ServletServer 2025.08.08 done
 3. Servlet Module
    1. Servlet Context 2025.08.11 done
+   2. FilterChain

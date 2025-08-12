@@ -37,12 +37,15 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
     final Duration stopDisplay = Duration.ofSeconds(5);
 
     public HttpConnector() throws IOException {
-        // Define the classes
+        // Define the classes, filters
         List<Class<? extends HttpServlet>> definedClasses = List.of(IndexServlet.class, HelloServlet.class);
+        List<Class<?>> definedFilters = List.of(LogFilter.class, HelloFilter.class);
 
         // Initialize the servlets with claess
         this.servletContext = new ServletContextImpl();
-        this.servletContext.initialize(definedClasses);
+        // this.servletContext.initialize(definedClasses);
+        this.servletContext.initServlets(definedClasses);
+        this.servletContext.initFilters(definedFilters);
 
         // Start Http Server
         String host = "0.0.0.0";
