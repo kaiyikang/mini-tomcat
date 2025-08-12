@@ -1,11 +1,15 @@
 package com.kaiyikang.minitomcat;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 
 import org.junit.jupiter.api.AfterAll;
@@ -46,17 +50,32 @@ public class MiniTomcatServerITCase {
     static void stopServer() throws InterruptedException {
         if (serverThread != null && serverThread.isAlive()) {
             serverThread.interrupt();
-            serverThread.join(2000);
+            serverThread.join(1000);
         }
     }
 
     @Test
     void testIndexPageIsServed() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/")).build();
 
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(200, response.statusCode());
+        assertEquals("<h1>Index page</h1>", response.body());
+    }
+
+    @Test
+    void testHelloPageIsServed() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/hello")).build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(200, response.statusCode());
+        assertEquals("<h1> Hello, world.</h1>", response.body());
     }
 
     private static void waitForServerReady() throws InterruptedException {
-        long timeoutMillis = 1000;
+        long timeoutMillis = 500;
         long startTime = System.currentTimeMillis();
         while (System.currentTimeMillis() - startTime < timeoutMillis) {
 
