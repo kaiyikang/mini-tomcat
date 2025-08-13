@@ -7,6 +7,7 @@ import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Enumeration;
@@ -26,13 +27,14 @@ import com.kaiyikang.minitomcat.utils.AnnoUtils;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterRegistration;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.Servlet;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRegistration;
-import jakarta.servlet.ServletRegistration.Dynamic;
+import jakarta.servlet.FilterRegistration;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.SessionCookieConfig;
@@ -56,24 +58,30 @@ public class ServletContextImpl implements ServletContext {
     final List<FilterMapping> filterMappings = new ArrayList<>();
 
     public void initFilters(List<Class<?>> filterClasses) {
+        // Load Filter Classes
         for (Class<?> c : filterClasses) {
             WebFilter wf = c.getAnnotation(WebFilter.class);
             if (wf != null) {
                 logger.info("auto register @WebFilter: {}", c.getName());
                 @SuppressWarnings("unchecked")
                 Class<? extends Filter> clazz = (Class<? extends Filter>) c;
-                // This step will update filterRegistrations
+                // This step will update this.filterRegistrations
                 FilterRegistration.Dynamic registration = this.addFilter(AnnoUtils.getFilterName(clazz), clazz);
                 registration.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true,
                         AnnoUtils.getFilterUrlPatterns(clazz));
                 registration.setInitParameters(AnnoUtils.getFilterInitParams(clazz));
             }
         }
-
+        // Init filters which are wrapped in registration
         for (String name : this.filterRegistrations.keySet()) {
             var registration = this.filterRegistrations.get(name);
             try {
-                registration.filter.init(registration.get)
+                registration.filter.init(registration.getFilterConfig());
+                this.nameToFilters.put(name, registration.filter);
+                for (String urlPattern : registration.getUrlPatternMappings()) {
+                    this.filterMappings.add(urlPattern, registration.filter);
+                }
+                registration.filter = true;
             } catch (ServletException e) {
                 logger.error("init filter failed: " + name + " / " + registration.filter.getClass().getName(), e);
             }
@@ -81,32 +89,6 @@ public class ServletContextImpl implements ServletContext {
     }
 
     public void initServlets(List<Class<?>> servletClasses) {
-
-    }
-
-    public void process(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-        String uri = request.getRequestURI();
-        Servlet servlet = null;
-
-        // Find the matched servlet
-        for (ServletMapping mapping : this.servletMappings) {
-            if (mapping.matches(uri)) {
-                servlet = mapping.servlet;
-                break;
-            }
-        }
-
-        if (servlet == null) {
-            PrintWriter pm = response.getWriter();
-            pm.write("<h1>404 Not Found</h1> <p>No mapping for URL: " + uri + "</p>");
-            pm.close();
-            return;
-        }
-
-        servlet.service(request, response);
-    }
-
-    public void initialize(List<Class<? extends HttpServlet>> servletClasses) {
         // Load the servlet classes
         for (Class<?> servletClass : servletClasses) {
             WebServlet ws = servletClass.getAnnotation(WebServlet.class);
@@ -114,7 +96,7 @@ public class ServletContextImpl implements ServletContext {
                 logger.info("auto register @WebServlet: {}", servletClass.getName());
                 @SuppressWarnings("unchecked")
                 Class<? extends Servlet> clazz = (Class<? extends Servlet>) servletClass;
-                Dynamic registration = this.addServlet(AnnoUtils.getServletName(clazz), clazz);
+                ServletRegistration.Dynamic registration = this.addServlet(AnnoUtils.getServletName(clazz), clazz);
                 registration.addMapping(AnnoUtils.getServletUrlPatterns(clazz));
                 registration.setInitParameters(AnnoUtils.getServletInitParams(clazz));
             }
@@ -134,7 +116,46 @@ public class ServletContextImpl implements ServletContext {
                 logger.error("init servlet failed: " + name + " / " + registration.servlet.getClass().getName(), e);
             }
         }
-        Collections.sort(this.servletMappings);
+    }
+
+    public void process(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+        String uri = request.getRequestURI();
+
+        // Find the matched servlet
+        Servlet servlet = null;
+        for (ServletMapping mapping : this.servletMappings) {
+            if (mapping.matches(uri)) {
+                servlet = mapping.servlet;
+                break;
+            }
+        }
+        if (servlet == null) {
+            PrintWriter pm = response.getWriter();
+            pm.write("<h1>404 Not Found</h1> <p>No mapping for URL: " + uri + "</p>");
+            pm.close();
+            return;
+        }
+
+        // servlet.service(request, response);
+        // Find the matched filters:
+        List<Filter> enabledFilters = new ArrayList<>();
+        for (FilterMapping mapping : this.filterMappings) {
+            if (mapping.matches(uri)) {
+                enabledFilters.add(mapping.filter);
+            }
+        }
+        Filter[] filters = enabledFilters.toArray(Filter[]::new);
+        logger.atDebug().log("process {} by filter {}, servlet {}", uri, Arrays.toString(filters), servlet);
+        FilterChain chain = new FilterChainImpl(filters, servlet);
+        try {
+            chain.doFilter(request, response);
+        } catch (ServletException e) {
+            logger.error(e.getMessage(), e);
+            throw new IOException(e);
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Override
@@ -145,8 +166,10 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletContext getContext(String uripath) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getContext'");
+        if ("".equals(uripath)) {
+            return this;
+        }
+        return null;
     }
 
     @Override
@@ -174,11 +197,11 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public boolean setInitParameter(String name, String value) {
-        throw new UnsupportedOperationException("Unimplemented method 'setInitParameter'");
+        throw new UnsupportedOperationException("setInitParameter");
     }
 
     @Override
-    public Dynamic addServlet(String servletName, String className) {
+    public ServletRegistration.Dynamic addServlet(String servletName, String className) {
 
         // or className == null || className.isEmpty()
         if (className.isBlank()) {
@@ -196,7 +219,7 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public Dynamic addServlet(String servletName, Class<? extends Servlet> servletClass) {
+    public ServletRegistration.Dynamic addServlet(String servletName, Class<? extends Servlet> servletClass) {
         if (servletClass == null) {
             throw new IllegalArgumentException("class is null.");
         }
@@ -211,7 +234,7 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public Dynamic addServlet(String servletName, Servlet servlet) {
+    public ServletRegistration.Dynamic addServlet(String servletName, Servlet servlet) {
         // Final step of addServlet: registration
         if (servletName == null) {
             throw new IllegalArgumentException("name is null.");
@@ -240,34 +263,62 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public jakarta.servlet.FilterRegistration.Dynamic addFilter(String filterName, String className) {
+    public FilterRegistration.Dynamic addFilter(String filterName, String className) {
+        if (className.isBlank()) {
+            throw new IllegalArgumentException("class name is null or empty.");
+        }
+        Filter filter = null;
+        try {
+            Class<? extends Filter> clazz = createInstance(className);
+            filter = createInstance(clazz);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        return addFilter(filterName, filter);
     }
 
     @Override
-    public jakarta.servlet.FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
+    public FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
+        if (filterName == null) {
+            throw new IllegalArgumentException("class is null.");
+        }
+        if (filter == null) {
+            throw new IllegalArgumentException("filter is null,");
+        }
+        var registration = new FilterRegistrationImp(this, filterName, filter);
+        this.filterRegistrations.put(filterName, registration);
+        return registration;
     }
 
     @Override
-    public jakarta.servlet.FilterRegistration.Dynamic addFilter(String filterName,
+    public FilterRegistration.Dynamic addFilter(String filterName,
             Class<? extends Filter> filterClass) {
+        if (filterClass == null) {
+            throw new IllegalArgumentException("class is null.");
+        }
+        Filter filter = null;
+        try {
+            filter = createInstance(filterClass);
+
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        return addFilter(filterName, filter);
     }
 
     @Override
     public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'createFilter'");
+        return createInstance(clazz);
     }
 
     @Override
     public FilterRegistration getFilterRegistration(String filterName) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getFilterRegistration'");
+        return this.filterRegistrations.get(filterName);
     }
 
     @Override
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getFilterRegistrations'");
+        return Map.copyOf(this.filterRegistrations);
     }
 
     @Override
