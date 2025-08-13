@@ -41,11 +41,22 @@ public class ServletContextImpl implements ServletContext {
 
     final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private Map<String, ServletRegistrationImpl> servletRegisterations = new HashMap<>();
+    private Map<String, ServletRegistrationImpl> servletRegistrations = new HashMap<>();
+    private Map<String, FilterRegistrationImp> filterRegistrations = new HashMap<>();
 
     private Map<String, Servlet> nameToServlets = new HashMap<>();
+    private Map<String, Filter> nameToFilters = new HashMap<>();
 
     final List<ServletMapping> servletMappings = new ArrayList<>();
+    final List<FilterMapping> filterMappings = new ArrayList<>();
+
+    public void initFilters(List<Class<?>> filterClasses) {
+
+    }
+
+    public void initServlets(List<Class<?>> servletClasses) {
+
+    }
 
     public void process(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         String uri = request.getRequestURI();
@@ -84,8 +95,8 @@ public class ServletContextImpl implements ServletContext {
         }
 
         // Init all servlets
-        for (String name : this.servletRegisterations.keySet()) {
-            var registration = this.servletRegisterations.get(name);
+        for (String name : this.servletRegistrations.keySet()) {
+            var registration = this.servletRegistrations.get(name);
             try {
                 registration.servlet.init(registration.getServletConfig());
                 this.nameToServlets.put(name, registration.servlet);
@@ -104,6 +115,12 @@ public class ServletContextImpl implements ServletContext {
     public String getContextPath() {
         // Only support root context path
         return "";
+    }
+
+    @Override
+    public ServletContext getContext(String uripath) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getContext'");
     }
 
     @Override
@@ -177,7 +194,7 @@ public class ServletContextImpl implements ServletContext {
             throw new IllegalArgumentException("servlet is null,");
         }
         var registration = new ServletRegistrationImpl(this, servletName, servlet);
-        this.servletRegisterations.put(servletName, registration);
+        this.servletRegistrations.put(servletName, registration);
         return registration;
     }
 
@@ -188,12 +205,43 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration getServletRegistration(String servletName) {
-        return this.servletRegisterations.get(servletName);
+        return this.servletRegistrations.get(servletName);
     }
 
     @Override
     public Map<String, ? extends ServletRegistration> getServletRegistrations() {
-        return Map.copyOf(this.servletRegisterations);
+        return Map.copyOf(this.servletRegistrations);
+    }
+
+    @Override
+    public jakarta.servlet.FilterRegistration.Dynamic addFilter(String filterName, String className) {
+    }
+
+    @Override
+    public jakarta.servlet.FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
+    }
+
+    @Override
+    public jakarta.servlet.FilterRegistration.Dynamic addFilter(String filterName,
+            Class<? extends Filter> filterClass) {
+    }
+
+    @Override
+    public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'createFilter'");
+    }
+
+    @Override
+    public FilterRegistration getFilterRegistration(String filterName) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getFilterRegistration'");
+    }
+
+    @Override
+    public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getFilterRegistrations'");
     }
 
     @Override
@@ -231,15 +279,7 @@ public class ServletContextImpl implements ServletContext {
         }
     }
 
-    // ===== Implemented methods =====
-
-    // ===== Not implemented yet =====
-
-    @Override
-    public ServletContext getContext(String uripath) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getContext'");
-    }
+    // =============== Not implemented yet ===============
 
     @Override
     public Set<String> getResourcePaths(String path) {
@@ -329,43 +369,6 @@ public class ServletContextImpl implements ServletContext {
     public Dynamic addJspFile(String servletName, String jspFile) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'addJspFile'");
-    }
-
-    @Override
-    public jakarta.servlet.FilterRegistration.Dynamic addFilter(String filterName, String className) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addFilter'");
-    }
-
-    @Override
-    public jakarta.servlet.FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addFilter'");
-    }
-
-    @Override
-    public jakarta.servlet.FilterRegistration.Dynamic addFilter(String filterName,
-            Class<? extends Filter> filterClass) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addFilter'");
-    }
-
-    @Override
-    public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'createFilter'");
-    }
-
-    @Override
-    public FilterRegistration getFilterRegistration(String filterName) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getFilterRegistration'");
-    }
-
-    @Override
-    public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getFilterRegistrations'");
     }
 
     @Override

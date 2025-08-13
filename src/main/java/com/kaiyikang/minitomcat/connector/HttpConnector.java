@@ -12,6 +12,7 @@ import java.util.List;
 
 import com.sun.net.httpserver.HttpServer;
 
+import jakarta.servlet.Filter;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -21,6 +22,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import com.kaiyikang.minitomcat.engine.HttpServletRequestImpl;
 import com.kaiyikang.minitomcat.engine.HttpServletResponseImpl;
 import com.kaiyikang.minitomcat.engine.ServletContextImpl;
+import com.kaiyikang.minitomcat.engine.filter.HelloFilter;
+import com.kaiyikang.minitomcat.engine.filter.LogFilter;
 import com.kaiyikang.minitomcat.engine.servlet.IndexServlet;
 import com.kaiyikang.minitomcat.engine.servlet.HelloServlet;
 import com.sun.net.httpserver.HttpExchange;
@@ -39,7 +42,7 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
     public HttpConnector() throws IOException {
         // Define the classes, filters
         List<Class<? extends HttpServlet>> definedClasses = List.of(IndexServlet.class, HelloServlet.class);
-        List<Class<?>> definedFilters = List.of(LogFilter.class, HelloFilter.class);
+        List<Class<? extends Filter>> definedFilters = List.of(LogFilter.class, HelloFilter.class);
 
         // Initialize the servlets with claess
         this.servletContext = new ServletContextImpl();
