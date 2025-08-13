@@ -79,9 +79,9 @@ public class ServletContextImpl implements ServletContext {
                 registration.filter.init(registration.getFilterConfig());
                 this.nameToFilters.put(name, registration.filter);
                 for (String urlPattern : registration.getUrlPatternMappings()) {
-                    this.filterMappings.add(urlPattern, registration.filter);
+                    this.filterMappings.add(new FilterMapping(urlPattern, registration.filter));
                 }
-                registration.filter = true;
+                registration.initialized = true;
             } catch (ServletException e) {
                 logger.error("init filter failed: " + name + " / " + registration.filter.getClass().getName(), e);
             }
@@ -443,7 +443,7 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public Dynamic addJspFile(String servletName, String jspFile) {
+    public ServletRegistration.Dynamic addJspFile(String servletName, String jspFile) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'addJspFile'");
     }

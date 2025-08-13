@@ -22,6 +22,10 @@ public class InitParameters extends LazyMap<String> {
         return true;
     }
 
+    public String getInitParamer(String name) {
+        return super.get(name);
+    }
+
     public Set<String> setInitParameters(Map<String, String> initParameters) {
         if (initParameters == null) {
             throw new IllegalArgumentException("initParameters is null.");

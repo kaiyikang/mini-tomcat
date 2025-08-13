@@ -41,8 +41,8 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
 
     public HttpConnector() throws IOException {
         // Define the classes, filters
-        List<Class<? extends HttpServlet>> definedClasses = List.of(IndexServlet.class, HelloServlet.class);
-        List<Class<? extends Filter>> definedFilters = List.of(LogFilter.class, HelloFilter.class);
+        List<Class<?>> definedClasses = List.of(IndexServlet.class, HelloServlet.class);
+        List<Class<?>> definedFilters = List.of(LogFilter.class, HelloFilter.class);
 
         // Initialize the servlets with claess
         this.servletContext = new ServletContextImpl();

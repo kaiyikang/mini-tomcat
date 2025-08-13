@@ -15,9 +15,12 @@ import jakarta.servlet.http.HttpServletResponse;
 public class HttpServletResponseImpl implements HttpServletResponse {
 
     final HttpExchangeResponse exchangeResponse;
+    int status = 200;
+    String contentType;
 
     public HttpServletResponseImpl(HttpExchangeResponse exchangeResponse) {
         this.exchangeResponse = exchangeResponse;
+        this.setContentType("text/html");
     }
 
     @Override
@@ -34,6 +37,19 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     public PrintWriter getWriter() throws IOException {
         this.exchangeResponse.sendResponseHeaders(200, 0);
         return new PrintWriter(this.exchangeResponse.getResponseBody(), true, StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public void sendError(int sc, String msg) throws IOException {
+        this.status = sc;
+        PrintWriter pw = getWriter();
+        pw.write(String.format("<h1>%d %s</h1>", sc, msg));
+        pw.close();
+    }
+
+    @Override
+    public void sendError(int sc) throws IOException {
+        sendError(sc, "error");
     }
 
     // ========= Not implement yet =========
@@ -150,18 +166,6 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     public String encodeRedirectURL(String url) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'encodeRedirectURL'");
-    }
-
-    @Override
-    public void sendError(int sc, String msg) throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'sendError'");
-    }
-
-    @Override
-    public void sendError(int sc) throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'sendError'");
     }
 
     @Override

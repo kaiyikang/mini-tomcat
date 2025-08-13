@@ -17,7 +17,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-@Timeout(15)
+@Timeout(7)
 public class MiniTomcatServerITCase {
 
     private static Thread serverThread;
@@ -66,12 +66,32 @@ public class MiniTomcatServerITCase {
 
     @Test
     void testHelloPageIsServed() throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/hello")).build();
+        // Given
+        HttpRequest requestBob = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/hello?name=Bob")).build();
+        HttpRequest requestAlice = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/hello?name=Alice")).build();
 
+        // When
+        HttpResponse<String> responseBob = httpClient.send(requestBob, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> responseAlice = httpClient.send(requestAlice, HttpResponse.BodyHandlers.ofString());
+
+        // Then
+        assertEquals(200, responseBob.statusCode());
+        assertEquals(200, responseAlice.statusCode());
+        assertEquals("<h1> Hello, Bob.</h1>", responseBob.body());
+        assertEquals("<h1> Hello, Alice.</h1>", responseAlice.body());
+    }
+
+    @Test
+    void testFilterChainWithFailedName() throws IOException, InterruptedException {
+        // Given
+        HttpRequest request = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/hello?name=Yikai")).build();
+
+        // When
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
+        // Then
         assertEquals(200, response.statusCode());
-        assertEquals("<h1> Hello, world.</h1>", response.body());
+        assertEquals("<h1>403 Forbidden</h1>", response.body());
     }
 
     private static void waitForServerReady() throws InterruptedException {
