@@ -228,13 +228,20 @@ The execution logic within the `Context` is straightforward. It uses the `servle
   └─────────────────┘
 ```
 
-Filter 的作用是在`servlet.service(request, response)`之前，提前处理 HTTP 请求，比如打印日志，或者登陆检查等等。
+The purpose of a `Filter` is to pre-process an HTTP request _before_ it reaches the final `servlet.service(request, response)`. This is useful for tasks like logging or performing authentication checks.
 
-该 Filter 使用的是 Chain of Responsibiliy 的模式，它允许让 Filter 都有机会处理请求，直到最后成功。
+This system uses the **Chain of Responsibility** design pattern. It gives multiple Filters a chance to handle the request in sequence before it reaches its final destination.
 
-每一个 Filter 都会在`process`方法中根据路径匹配，结果可能是 0 个或是多个 Filter。`FilterChainImpl.doFilter` 和`Filter`相互配合，不停的调用下一个 Filter，直至最后抵达`servlet`。
+Here's a simple analogy to understand how it works:
 
-具体的方法，将`FilterChainImpl`想像成楼梯间，`Filter`则是每一层。每一层都需要去，同时必需要经过楼体间。具体在哪一层楼,楼体间会记住（index），每一层楼只需要处理事件，然后选择返回楼梯间（`chain.doFilter(request, response)`）或者直接跳出整栋楼(`resp.sendError(403, "Forbidden");`)，而楼体间会不断进入下一层（`filters[current].doFilter(request, response, this);`）最终抵达底层`servlet.service(request, response);`。
+Imagine the `FilterChainImpl` is a **stairwell** in a building, and each `Filter` is a **floor**.
+
+The stairwell always remembers which floor you are on (using its `index` variable). On each floor, the `Filter` does its job. When it's finished, it has two choices:
+
+1.  **Proceed to the next floor** by going back into the stairwell (by calling `chain.doFilter(request, response)`).
+2.  **Exit the building immediately** (e.g., by sending an error like `resp.sendError(403, "Forbidden")`).
+
+When you choose to proceed, the stairwell (`FilterChainImpl`) automatically takes you to the next floor in the sequence (`filters[current].doFilter(...)`). This process repeats until you've passed all the floors and finally arrive at your destination on the ground floor: the `servlet.service(...)` method.
 
 ## Milestone
 
