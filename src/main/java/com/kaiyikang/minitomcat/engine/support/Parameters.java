@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.kaiyikang.minitomcat.connector.HttpExchangeRequest;
+import com.kaiyikang.minitomcat.utils.HttpUtils;
 
 public class Parameters {
     Map<String, String[]> parameters;
@@ -50,8 +51,9 @@ public class Parameters {
         Map<String, List<String>> params = new HashMap<>();
         String query = this.exchangeRequest.getRequestURI().getRawQuery();
         if (query != null) {
-            params.HttpUtils.parseQuery(query, charset);
+            params = HttpUtils.parseQuery(query, charset);
         }
+        // TODO
 
         Map<String, String[]> paramsMap = new HashMap<>();
         for (String key : params.keySet()) {
