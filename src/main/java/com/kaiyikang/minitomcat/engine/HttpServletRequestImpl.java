@@ -91,27 +91,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         return this.parameters.getParameterValues();
     }
 
-    // Map<String, String> parseQuery(String query) {
-
-    // if (query == null || query.isEmpty()) {
-    // return Map.of();
-    // }
-
-    // // "key=value&key1=value1"
-    // String[] ss = query.split("&");
-    // // Regex: String[] ss = Pattern.compile("\\&").split(query);
-    // Map<String, String> map = new HashMap<>();
-    // for (String s : ss) {
-    // int n = s.indexOf('=');
-    // if (n >= 1) {
-    // String key = s.substring(0, n);
-    // String val = s.substring(n + 1);
-    // map.putIfAbsent(key, URLDecoder.decode(val, StandardCharsets.UTF_8));
-    // }
-    // }
-    // return map;
-    // }
-
     @Override
     public HttpSession getSession(boolean create) {
         // TODO Auto-generated method stub
