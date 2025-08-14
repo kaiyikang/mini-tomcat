@@ -136,7 +136,6 @@ public class ServletContextImpl implements ServletContext {
             return;
         }
 
-        // servlet.service(request, response);
         // Find the matched filters:
         List<Filter> enabledFilters = new ArrayList<>();
         for (FilterMapping mapping : this.filterMappings) {
@@ -144,6 +143,8 @@ public class ServletContextImpl implements ServletContext {
                 enabledFilters.add(mapping.filter);
             }
         }
+
+        // Process the request and response
         Filter[] filters = enabledFilters.toArray(Filter[]::new);
         logger.atDebug().log("process {} by filter {}, servlet {}", uri, Arrays.toString(filters), servlet);
         FilterChain chain = new FilterChainImpl(filters, servlet);
