@@ -243,6 +243,13 @@ The stairwell always remembers which floor you are on (using its `index` variabl
 
 When you choose to proceed, the stairwell (`FilterChainImpl`) automatically takes you to the next floor in the sequence (`filters[current].doFilter(...)`). This process repeats until you've passed all the floors and finally arrive at your destination on the ground floor: the `servlet.service(...)` method.
 
+## HttpSession
+
+- Create a only session ID for customer first request
+- Store the ID in the Cookie which is called `JSESSIONID`
+- Create HttpSession and like to ID
+- Load `JSESSIONID` Cookie to get ID and find `HttpSession` object
+
 ## Milestone
 
 1. SimpleHttpServer done

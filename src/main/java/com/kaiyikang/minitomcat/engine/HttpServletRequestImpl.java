@@ -7,12 +7,17 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 import com.kaiyikang.minitomcat.connector.HttpExchangeRequest;
+import com.kaiyikang.minitomcat.engine.support.HttpHeaders;
+import com.kaiyikang.minitomcat.engine.support.Parameters;
+import com.kaiyikang.minitomcat.utils.HttpUtils;
 
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.DispatcherType;
@@ -32,15 +37,22 @@ import jakarta.servlet.http.Part;
 
 public class HttpServletRequestImpl implements HttpServletRequest {
 
+    final ServletContextImpl servletContext;
     final HttpExchangeRequest exchangeRequest;
+    final HttpServletResponse response;
+    final HttpHeaders headers;
+    final Parameters parameters;
 
-    public HttpServletRequestImpl(HttpExchangeRequest exchangeRequest) {
+    Boolean inputCalled = null;
+
+    public HttpServletRequestImpl(ServletContextImpl servletContext, HttpExchangeRequest exchangeRequest,
+            HttpServletResponse response) {
+        this.servletContext = servletContext;
         this.exchangeRequest = exchangeRequest;
-    }
+        this.response = response;
+        this.headers = new HttpHeaders(exchangeRequest.getRequestHeaders());
+        this.parameters = new Parameters(exchangeRequest, "UTF-8");
 
-    @Override
-    public String getRequestURI() {
-        return exchangeRequest.getRequestURI().getPath();
     }
 
     @Override
@@ -49,34 +61,135 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public String getParameter(String arg0) {
-        String query = this.exchangeRequest.getRequestURI().getRawQuery();
-        if (query == null) {
-            return null;
-        }
-        Map<String, String> params = parseQuery(query);
-        return params.get(arg0);
+    public String getRequestURI() {
+        return exchangeRequest.getRequestURI().getPath();
     }
 
-    Map<String, String> parseQuery(String query) {
+    @Override
+    public String getParameter(String name) {
+        return this.parameters.getParameter(name);
+        // String query = this.exchangeRequest.getRequestURI().getRawQuery();
+        // if (query == null) {
+        // return null;
+        // }
+        // Map<String, String> params = parseQuery(query);
+        // return params.get(arg0);
+    }
 
-        if (query == null || query.isEmpty()) {
-            return Map.of();
-        }
+    @Override
+    public Enumeration<String> getParameterNames() {
+        return this.parameters.getParameterNames();
+    }
 
-        // "key=value&key1=value1"
-        String[] ss = query.split("&");
-        // Regex: String[] ss = Pattern.compile("\\&").split(query);
-        Map<String, String> map = new HashMap<>();
-        for (String s : ss) {
-            int n = s.indexOf('=');
-            if (n >= 1) {
-                String key = s.substring(0, n);
-                String val = s.substring(n + 1);
-                map.putIfAbsent(key, URLDecoder.decode(val, StandardCharsets.UTF_8));
-            }
+    @Override
+    public Map<String, String[]> getParameterMap() {
+        return this.parameters.getParameterMap();
+    }
+
+    @Override
+    public String[] getParameterValues(String arg0) {
+        return this.parameters.getParameterValues();
+    }
+
+    // Map<String, String> parseQuery(String query) {
+
+    // if (query == null || query.isEmpty()) {
+    // return Map.of();
+    // }
+
+    // // "key=value&key1=value1"
+    // String[] ss = query.split("&");
+    // // Regex: String[] ss = Pattern.compile("\\&").split(query);
+    // Map<String, String> map = new HashMap<>();
+    // for (String s : ss) {
+    // int n = s.indexOf('=');
+    // if (n >= 1) {
+    // String key = s.substring(0, n);
+    // String val = s.substring(n + 1);
+    // map.putIfAbsent(key, URLDecoder.decode(val, StandardCharsets.UTF_8));
+    // }
+    // }
+    // return map;
+    // }
+
+    @Override
+    public HttpSession getSession(boolean create) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getSession'");
+    }
+
+    @Override
+    public HttpSession getSession() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getSession'");
+    }
+
+    @Override
+    public String changeSessionId() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'changeSessionId'");
+    }
+
+    @Override
+    public boolean isRequestedSessionIdValid() {
+        return false;
+    }
+
+    @Override
+    public boolean isRequestedSessionIdFromCookie() {
+        return true;
+    }
+
+    @Override
+    public boolean isRequestedSessionIdFromURL() {
+        return false;
+    }
+
+    @Override
+    public Cookie[] getCookies() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getCookies'");
+    }
+
+    @Override
+    public ServletInputStream getInputStream() throws IOException {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getInputStream'");
+    }
+
+    @Override
+    public BufferedReader getReader() throws IOException {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getReader'");
+    }
+
+    @Override
+    public long getDateHeader(String name) {
+        return this.headers.getDateHeader(name);
+    }
+
+    @Override
+    public String getHeader(String name) {
+        return this.headers.getHeader(name);
+    }
+
+    @Override
+    public Enumeration<String> getHeaderNames() {
+        return Collections.enumeration(this.headers.getHeaderNames());
+    }
+
+    @Override
+    public Enumeration<String> getHeaders(String name) {
+        List<String> hs = this.headers.getHeaders(name);
+        if (hs == null) {
+            return Collections.emptyEnumeration();
         }
-        return map;
+        return Collections.enumeration(hs);
+    }
+
+    @Override
+    public int getIntHeader(String name) {
+        return this.headers.getIntHeader(name);
     }
 
     // ========= Not implement yet =========
@@ -130,12 +243,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public ServletInputStream getInputStream() throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getInputStream'");
-    }
-
-    @Override
     public String getLocalAddr() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getLocalAddr'");
@@ -166,24 +273,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public Map<String, String[]> getParameterMap() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getParameterMap'");
-    }
-
-    @Override
-    public Enumeration<String> getParameterNames() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getParameterNames'");
-    }
-
-    @Override
-    public String[] getParameterValues(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getParameterValues'");
-    }
-
-    @Override
     public String getProtocol() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getProtocol'");
@@ -193,12 +282,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public String getProtocolRequestId() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getProtocolRequestId'");
-    }
-
-    @Override
-    public BufferedReader getReader() throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getReader'");
     }
 
     @Override
@@ -316,12 +399,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public String changeSessionId() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'changeSessionId'");
-    }
-
-    @Override
     public String getAuthType() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getAuthType'");
@@ -331,42 +408,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public String getContextPath() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getContextPath'");
-    }
-
-    @Override
-    public Cookie[] getCookies() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getCookies'");
-    }
-
-    @Override
-    public long getDateHeader(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getDateHeader'");
-    }
-
-    @Override
-    public String getHeader(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getHeader'");
-    }
-
-    @Override
-    public Enumeration<String> getHeaderNames() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getHeaderNames'");
-    }
-
-    @Override
-    public Enumeration<String> getHeaders(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getHeaders'");
-    }
-
-    @Override
-    public int getIntHeader(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getIntHeader'");
     }
 
     @Override
@@ -424,39 +465,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public HttpSession getSession() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getSession'");
-    }
-
-    @Override
-    public HttpSession getSession(boolean arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getSession'");
-    }
-
-    @Override
     public Principal getUserPrincipal() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getUserPrincipal'");
-    }
-
-    @Override
-    public boolean isRequestedSessionIdFromCookie() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isRequestedSessionIdFromCookie'");
-    }
-
-    @Override
-    public boolean isRequestedSessionIdFromURL() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isRequestedSessionIdFromURL'");
-    }
-
-    @Override
-    public boolean isRequestedSessionIdValid() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isRequestedSessionIdValid'");
     }
 
     @Override
