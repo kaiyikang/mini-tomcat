@@ -1,6 +1,7 @@
 package com.kaiyikang.minitomcat.connector;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 
@@ -10,6 +11,7 @@ import com.sun.net.httpserver.HttpExchange;
 public class HttpExchangeAdapter implements HttpExchangeRequest, HttpExchangeResponse {
 
     final HttpExchange exchange;
+    byte[] requestBody;
 
     public HttpExchangeAdapter(HttpExchange httpExchange) {
         this.exchange = httpExchange;
@@ -43,5 +45,15 @@ public class HttpExchangeAdapter implements HttpExchangeRequest, HttpExchangeRes
     @Override
     public void sendResponseHeaders(int rCode, long responseLength) throws IOException {
         this.exchange.sendResponseHeaders(rCode, responseLength);
+    }
+
+    @Override
+    public byte[] getRequestBody() throws IOException {
+        if (this.requestBody == null) {
+            try (InputStream input = this.exchange.getRequestBody()) {
+                this.requestBody = input.readAllBytes();
+            }
+        }
+        return this.requestBody;
     }
 }

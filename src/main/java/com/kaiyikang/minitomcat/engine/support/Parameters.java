@@ -1,5 +1,7 @@
 package com.kaiyikang.minitomcat.engine.support;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -53,7 +55,31 @@ public class Parameters {
         if (query != null) {
             params = HttpUtils.parseQuery(query, charset);
         }
-        // TODO
+        if ("POST".equals(this.exchangeRequest.getRequestMethod())) {
+            String value = HttpUtils.getHeader(this.exchangeRequest.getRequestHeaders(), "Content-Type");
+            if (value != null && value.startsWith("application/x-www-form-urlencoded")) {
+                // Load request body
+                String requestBody;
+                try {
+                    requestBody = new String(this.exchangeRequest.getRequestBody(), charset);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+
+                Map<String, List<String>> postParams = HttpUtils.parseQuery(requestBody, charset);
+                for (String key : postParams.keySet()) {
+                    List<String> queryVal = params.get(key);
+                    List<String> postVal = postParams.get(key);
+                    // If no query value, use post value
+                    if (queryVal == null) {
+                        params.put(key, postVal);
+                    } else {
+                        // otherwise add post value into query value
+                        queryVal.addAll(postVal);
+                    }
+                }
+            }
+        }
 
         Map<String, String[]> paramsMap = new HashMap<>();
         for (String key : params.keySet()) {

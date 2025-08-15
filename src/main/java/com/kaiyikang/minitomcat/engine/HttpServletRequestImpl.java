@@ -52,7 +52,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         this.response = response;
         this.headers = new HttpHeaders(exchangeRequest.getRequestHeaders());
         this.parameters = new Parameters(exchangeRequest, "UTF-8");
-
     }
 
     @Override

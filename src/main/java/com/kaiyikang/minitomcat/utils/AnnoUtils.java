@@ -15,6 +15,7 @@ import jakarta.servlet.annotation.WebInitParam;
 import jakarta.servlet.annotation.WebServlet;
 
 public class AnnoUtils {
+
     public static String getServletName(Class<? extends Servlet> servletClass) {
         WebServlet w = servletClass.getAnnotation(WebServlet.class);
         if (w != null && !w.name().isEmpty()) {

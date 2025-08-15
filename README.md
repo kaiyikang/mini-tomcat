@@ -6,7 +6,7 @@ All diagram come from this tutorial resource.
 
 ## What is the main objective of this mini Tomcat?
 
-The main objective with this mini-tomcat is to understand how popular web server is built. I want to get a solid grasp of concepts like servlets or filters. By learning the classic structure, I can apply that knowledge to other web servers and similar projects. At the same time, it's a great way to improve my basic java skill.
+The primary objective of this mini-Tomcat is to deconstruct how a popular web server operates, enabling me to apply this foundational knowledge to other web servers and similar projects. At the same time, I aim to gain a solid grasp of core concepts like Servlets or Filters. Furthermore, implementing the specific details provides and excellent opportunity to enhance my practical Java skills and learn advanced techniques or patterns that are often missed in typical self-directed or AI-driven coding.
 
 ## Targeted Features
 
