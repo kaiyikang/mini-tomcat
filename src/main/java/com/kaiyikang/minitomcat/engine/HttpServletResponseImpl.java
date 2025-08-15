@@ -3,10 +3,14 @@ package com.kaiyikang.minitomcat.engine;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 import com.kaiyikang.minitomcat.connector.HttpExchangeResponse;
+import com.kaiyikang.minitomcat.engine.support.HttpHeaders;
 
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.Cookie;
@@ -15,41 +19,241 @@ import jakarta.servlet.http.HttpServletResponse;
 public class HttpServletResponseImpl implements HttpServletResponse {
 
     final HttpExchangeResponse exchangeResponse;
+    final HttpHeaders headers;
+
     int status = 200;
+    int bufferSize = 1024;
+    Boolean callOutput = null;
+    ServletOutputStream output;
+    PrintWriter writer;
+
     String contentType;
+    long contentLength = 0;
+    List<Cookie> cookies = null;
+    boolean committed = false;
 
     public HttpServletResponseImpl(HttpExchangeResponse exchangeResponse) {
         this.exchangeResponse = exchangeResponse;
+        this.headers = new HttpHeaders(exchangeResponse.getResponseHeaders());
         this.setContentType("text/html");
     }
 
     @Override
-    public void setHeader(String name, String value) {
-        this.exchangeResponse.getResponseHeaders().set(name, value);
+    public String getContentType() {
+        return this.contentType;
     }
 
     @Override
-    public void setContentType(String type) {
-        setHeader("Content-Type", type);
+    public ServletOutputStream getOutputStream() throws IOException {
+        if (callOutput == null) {
+            commitHeaders(0);
+            this.output = new ServletOutputStreamImpl(this.exchangeResponse.getResponseBody());
+            this.callOutput = Boolean.TRUE;
+            return this.output;
+        }
+        if (callOutput.booleanValue()) {
+            return this.output;
+        }
+        throw new IllegalStateException("Cannot open output stream when writer is opened.");
     }
 
     @Override
     public PrintWriter getWriter() throws IOException {
-        this.exchangeResponse.sendResponseHeaders(200, 0);
-        return new PrintWriter(this.exchangeResponse.getResponseBody(), true, StandardCharsets.UTF_8);
+        if (callOutput == null) {
+            commitHeaders(0);
+            this.writer = new PrintWriter(this.exchangeResponse.getResponseBody(), true, StandardCharsets.UTF_8);
+            this.callOutput = Boolean.FALSE;
+            return this.writer;
+        }
+        if (!callOutput.booleanValue()) {
+            return this.writer;
+        }
+        throw new IllegalStateException("Cannot open writer when output stream is opened");
+    }
+
+    @Override
+    public void setContentLength(int len) {
+        this.contentLength = len;
+    }
+
+    @Override
+    public void setContentLengthLong(long len) {
+        this.contentLength = len;
+    }
+
+    @Override
+    public void setContentType(String type) {
+        this.contentType = type;
+        setHeader("Content-Type", type);
+    }
+
+    @Override
+    public void setBufferSize(int size) {
+        if (this.callOutput != null) {
+            throw new IllegalStateException("Output stream or writer is opened.");
+        }
+        if (size < 0) {
+            throw new IllegalStateException("Invalid size: " + size);
+        }
+        this.bufferSize = size;
+    }
+
+    @Override
+    public int getBufferSize() {
+        return this.bufferSize;
+    }
+
+    @Override
+    public void flushBuffer() throws IOException {
+        if (this.callOutput == null) {
+            throw new IllegalStateException("Output stream or writer is not opened");
+        }
+        if (this.callOutput.booleanValue()) {
+            this.output.flush();
+        } else {
+            this.writer.flush();
+        }
+    }
+
+    @Override
+    public void resetBuffer() {
+        checkNotCommitted();
+    }
+
+    @Override
+    public boolean isCommitted() {
+        return this.committed;
+    }
+
+    @Override
+    public void reset() {
+        checkNotCommitted();
+        this.status = 200;
+        this.headers.clearHeaders();
+    }
+
+    @Override
+    public void addCookie(Cookie cookie) {
+        checkNotCommitted();
+        if (this.cookies == null) {
+            this.cookies = new ArrayList<>();
+        }
+        this.cookies.add(cookie);
     }
 
     @Override
     public void sendError(int sc, String msg) throws IOException {
+        checkNotCommitted();
         this.status = sc;
-        PrintWriter pw = getWriter();
-        pw.write(String.format("<h1>%d %s</h1>", sc, msg));
-        pw.close();
+        commitHeaders(-1);
     }
 
     @Override
     public void sendError(int sc) throws IOException {
-        sendError(sc, "error");
+        sendError(sc, "Error");
+    }
+
+    @Override
+    public void sendRedirect(String location) throws IOException {
+        checkNotCommitted();
+        this.status = 302;
+        this.headers.setHeader("location", location);
+        commitHeaders(-1);
+    }
+
+    @Override
+    public void setStatus(int sc) {
+        checkNotCommitted();
+        this.status = sc;
+    }
+
+    @Override
+    public int getStatus() {
+        return this.status;
+
+    }
+
+    // ===== Headers =====
+
+    @Override
+    public boolean containsHeader(String name) {
+        return this.headers.containsHeader(name);
+    }
+
+    @Override
+    public String getHeader(String name) {
+        return this.headers.getHeader(name);
+    }
+
+    @Override
+    public Collection<String> getHeaders(String name) {
+        List<String> hs = this.headers.getHeaders(name);
+        if (hs == null) {
+            return List.of();
+        }
+        return hs;
+    }
+
+    @Override
+    public Collection<String> getHeaderNames() {
+        return Collections.unmodifiableSet(this.headers.getHeaderNames());
+    }
+
+    @Override
+    public void setDateHeader(String name, long date) {
+        checkNotCommitted();
+        this.headers.setDateHeader(name, date);
+    }
+
+    @Override
+    public void addDateHeader(String name, long date) {x
+        checkNotCommitted();
+        this.headers.addDateHeader(name, date);
+    }
+
+    @Override
+    public void setHeader(String name, String value) {
+        checkNotCommitted();
+        this.headers.setHeader(name, value);
+    }
+
+    @Override
+    public void addHeader(String name, String value) {
+        checkNotCommitted();
+        this.headers.addHeader(name, value);
+    }
+
+    @Override
+    public void setIntHeader(String name, int value) {
+        checkNotCommitted();
+        this.headers.setIntHeader(name, value);
+    }
+
+    @Override
+    public void addIntHeader(String name, int value) {
+        checkNotCommitted();
+        this.headers.addIntHeader(name, value);
+    }
+
+    void commitHeaders(long length) throws IOException {
+        this.exchangeResponse.sendResponseHeaders(this.status, length);
+        this.committed = true;
+    }
+
+    public void cleanup() throws IOException {
+        if (this.callOutput != null) {
+            if (this.callOutput.booleanValue()) {
+                this.output.close();
+            } else {
+                this.writer.close();
+            }
+        }
+    }
+
+    void checkNotCommitted() {
+        if (this.committed) {
+            throw new IllegalStateException("Response is committed.");
+        }
     }
 
     // ========= Not implement yet =========
@@ -61,75 +265,9 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public String getContentType() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getContentType'");
-    }
-
-    @Override
-    public ServletOutputStream getOutputStream() throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getOutputStream'");
-    }
-
-    @Override
     public void setCharacterEncoding(String charset) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'setCharacterEncoding'");
-    }
-
-    @Override
-    public void setContentLength(int len) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setContentLength'");
-    }
-
-    @Override
-    public void setContentLengthLong(long len) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setContentLengthLong'");
-    }
-
-    @Override
-    public void addHeader(String name, String value) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addHeader'");
-    }
-
-    @Override
-    public void setBufferSize(int size) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setBufferSize'");
-    }
-
-    @Override
-    public int getBufferSize() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getBufferSize'");
-    }
-
-    @Override
-    public void flushBuffer() throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'flushBuffer'");
-    }
-
-    @Override
-    public void resetBuffer() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'resetBuffer'");
-    }
-
-    @Override
-    public boolean isCommitted() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isCommitted'");
-    }
-
-    @Override
-    public void reset() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'reset'");
     }
 
     @Override
@@ -145,18 +283,6 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public void addCookie(Cookie cookie) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addCookie'");
-    }
-
-    @Override
-    public boolean containsHeader(String name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'containsHeader'");
-    }
-
-    @Override
     public String encodeURL(String url) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'encodeURL'");
@@ -166,66 +292,6 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     public String encodeRedirectURL(String url) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'encodeRedirectURL'");
-    }
-
-    @Override
-    public void sendRedirect(String location) throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'sendRedirect'");
-    }
-
-    @Override
-    public void setDateHeader(String name, long date) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setDateHeader'");
-    }
-
-    @Override
-    public void addDateHeader(String name, long date) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addDateHeader'");
-    }
-
-    @Override
-    public void setIntHeader(String name, int value) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setIntHeader'");
-    }
-
-    @Override
-    public void addIntHeader(String name, int value) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addIntHeader'");
-    }
-
-    @Override
-    public void setStatus(int sc) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setStatus'");
-    }
-
-    @Override
-    public int getStatus() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getStatus'");
-    }
-
-    @Override
-    public String getHeader(String name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getHeader'");
-    }
-
-    @Override
-    public Collection<String> getHeaders(String name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getHeaders'");
-    }
-
-    @Override
-    public Collection<String> getHeaderNames() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getHeaderNames'");
     }
 
 }

@@ -64,16 +64,18 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
     }
 
     @Override
-    public void handle(HttpExchange exchagne) throws IOException {
-        logger.info("{}: {}?{}", exchagne.getRequestMethod(), exchagne.getRequestURI().getPath(),
-                exchagne.getRequestURI().getRawQuery());
-        var adaptor = new HttpExchangeAdapter(exchagne);
+    public void handle(HttpExchange exchange) throws IOException {
+        logger.info("{}: {}?{}", exchange.getRequestMethod(), exchange.getRequestURI().getPath(),
+                exchange.getRequestURI().getRawQuery());
+        var adaptor = new HttpExchangeAdapter(exchange);
         var response = new HttpServletResponseImpl(adaptor);
         var request = new HttpServletRequestImpl(this.servletContext, adaptor, response);
         try {
             this.servletContext.process(request, response);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
+        } finally {
+            response.cleanup();
         }
     }
 
