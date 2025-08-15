@@ -206,7 +206,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public void addDateHeader(String name, long date) {x
+    public void addDateHeader(String name, long date) {
         checkNotCommitted();
         this.headers.addDateHeader(name, date);
     }

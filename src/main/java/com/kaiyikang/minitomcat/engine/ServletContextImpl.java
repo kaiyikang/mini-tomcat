@@ -34,19 +34,19 @@ import jakarta.servlet.Servlet;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRegistration;
-import jakarta.servlet.FilterRegistration;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.SessionCookieConfig;
 import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class ServletContextImpl implements ServletContext {
 
     final Logger logger = LoggerFactory.getLogger(getClass());
+
+    final SessionManager sessionManager = new SessionManager(this, 600);
 
     private Map<String, ServletRegistrationImpl> servletRegistrations = new HashMap<>();
     private Map<String, FilterRegistrationImp> filterRegistrations = new HashMap<>();
@@ -357,6 +357,11 @@ public class ServletContextImpl implements ServletContext {
         }
     }
 
+    @Override
+    public int getSessionTimeout() {
+        return this.sessionManager.inactiveInterval;
+    }
+
     // =============== Not implemented yet ===============
 
     @Override
@@ -519,12 +524,6 @@ public class ServletContextImpl implements ServletContext {
     public String getVirtualServerName() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getVirtualServerName'");
-    }
-
-    @Override
-    public int getSessionTimeout() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getSessionTimeout'");
     }
 
     @Override

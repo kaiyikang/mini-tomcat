@@ -1,8 +1,11 @@
 package com.kaiyikang.minitomcat.engine;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.Collections;
@@ -10,10 +13,12 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 import com.kaiyikang.minitomcat.connector.HttpExchangeRequest;
 import com.kaiyikang.minitomcat.engine.support.HttpHeaders;
 import com.kaiyikang.minitomcat.engine.support.Parameters;
+import com.kaiyikang.minitomcat.utils.HttpUtils;
 
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.DispatcherType;
@@ -71,31 +76,54 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public Map<String, String[]> getParameterMap() {
-        return this.parameters.getParameterMap();
-    }
-
-    @Override
     public String[] getParameterValues(String name) {
         return this.parameters.getParameterValues(name);
     }
 
     @Override
+    public Map<String, String[]> getParameterMap() {
+        return this.parameters.getParameterMap();
+    }
+
+    @Override
     public HttpSession getSession(boolean create) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getSession'");
+        String sessionId = null;
+
+        // Find Cookie
+        Cookie[] cookies = getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("JSEEIONID".equals(cookie.getName())) {
+                    sessionId = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (sessionId == null && !create) {
+            return null;
+        }
+        // Create ID
+        if (sessionId == null) {
+            if (this.response.isCommitted()) {
+                throw new IllegalStateException("Cannot create session for response is committed.");
+            }
+            sessionId = UUID.randomUUID().toString();
+            // Set Cookie
+            String cookieValue = "JESSIONID=" + sessionId + "; Path=/; SameSite=Strict; HttpOnly";
+            this.response.addHeader("Set-Cookie", cookieValue);
+        }
+        return this.servletContext.sessionManager.getSession(sessionId);
     }
 
     @Override
     public HttpSession getSession() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getSession'");
+        return getSession(true);
     }
 
     @Override
     public String changeSessionId() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'changeSessionId'");
+        throw new UnsupportedOperationException("changeSessionId() is not supported.");
     }
 
     @Override
@@ -115,20 +143,29 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Cookie[] getCookies() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getCookies'");
+        String cookieValue = this.getHeader("Cookie");
+        return HttpUtils.parseCookies(cookieValue);
     }
 
     @Override
     public ServletInputStream getInputStream() throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getInputStream'");
+        if (this.inputCalled == null) {
+            this.inputCalled = Boolean.TRUE;
+            return new ServletInputStreamImpl(this.exchangeRequest.getRequestBody());
+        }
+        throw new IllegalStateException("Cannot reopen input stream after "
+                + (this.inputCalled ? "getInputStream()" : "getReader()") + " was called");
     }
 
     @Override
     public BufferedReader getReader() throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getReader'");
+        if (this.inputCalled == null) {
+            this.inputCalled = Boolean.FALSE;
+            return new BufferedReader(new InputStreamReader(
+                    new ByteArrayInputStream(this.exchangeRequest.getRequestBody()), StandardCharsets.UTF_8));
+        }
+        throw new IllegalStateException("Cannot reopen input stream after "
+                + (this.inputCalled ? "getInputStream()" : "getReader()") + " was called.");
     }
 
     @Override
@@ -142,17 +179,17 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public Enumeration<String> getHeaderNames() {
-        return Collections.enumeration(this.headers.getHeaderNames());
-    }
-
-    @Override
     public Enumeration<String> getHeaders(String name) {
         List<String> hs = this.headers.getHeaders(name);
         if (hs == null) {
             return Collections.emptyEnumeration();
         }
         return Collections.enumeration(hs);
+    }
+
+    @Override
+    public Enumeration<String> getHeaderNames() {
+        return Collections.enumeration(this.headers.getHeaderNames());
     }
 
     @Override
