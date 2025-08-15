@@ -12,7 +12,7 @@ public class DateUtilsTest {
     @Test
     void testParseDateTimeGMT() {
         // Given
-        String rfc1123String = "Fri, 13 Oct 2024 10:15:30 GMT";
+        String rfc1123String = "Fri, 13 Oct 2023 10:15:30 GMT";
         ZonedDateTime expectedZdt = ZonedDateTime.of(2023, 10, 13, 10, 15, 30, 0, ZoneOffset.UTC);
         long expectedEpochMilli = expectedZdt.toInstant().toEpochMilli();
 
