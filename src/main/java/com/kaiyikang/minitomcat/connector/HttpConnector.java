@@ -68,8 +68,8 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
         logger.info("{}: {}?{}", exchagne.getRequestMethod(), exchagne.getRequestURI().getPath(),
                 exchagne.getRequestURI().getRawQuery());
         var adaptor = new HttpExchangeAdapter(exchagne);
-        var request = new HttpServletRequestImpl(adaptor);
         var response = new HttpServletResponseImpl(adaptor);
+        var request = new HttpServletRequestImpl(this.servletContext, adaptor, response);
         try {
             this.servletContext.process(request, response);
         } catch (Exception e) {

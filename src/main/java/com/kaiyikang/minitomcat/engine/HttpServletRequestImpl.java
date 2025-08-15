@@ -3,13 +3,10 @@ package com.kaiyikang.minitomcat.engine;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -17,7 +14,6 @@ import java.util.Map;
 import com.kaiyikang.minitomcat.connector.HttpExchangeRequest;
 import com.kaiyikang.minitomcat.engine.support.HttpHeaders;
 import com.kaiyikang.minitomcat.engine.support.Parameters;
-import com.kaiyikang.minitomcat.utils.HttpUtils;
 
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.DispatcherType;
@@ -67,12 +63,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String getParameter(String name) {
         return this.parameters.getParameter(name);
-        // String query = this.exchangeRequest.getRequestURI().getRawQuery();
-        // if (query == null) {
-        // return null;
-        // }
-        // Map<String, String> params = parseQuery(query);
-        // return params.get(arg0);
     }
 
     @Override
@@ -86,8 +76,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public String[] getParameterValues(String arg0) {
-        return this.parameters.getParameterValues();
+    public String[] getParameterValues(String name) {
+        return this.parameters.getParameterValues(name);
     }
 
     @Override

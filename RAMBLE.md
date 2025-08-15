@@ -1,3 +1,8 @@
+Date 2025.08.15
+
+Familiar Code - Generate, then Review & Refine. Act as a senior code reviewer to the AI.
+Unfamiliar Code - Attempt, then Collaborate & Compare. Use the AI as a Socratic partner to fill your knowledge gaps.
+
 Date: 2025.08.14
 
 The thinking about how to cover different areas in the test:
