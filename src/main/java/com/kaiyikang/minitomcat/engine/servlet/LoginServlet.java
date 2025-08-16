@@ -19,9 +19,20 @@ public class LoginServlet extends HttpServlet {
             "root", "admin123");
 
     @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String html = "<h1>Error, GET /login is not supported.</h1>";
+        resp.setContentType("text/html");
+        PrintWriter pw = resp.getWriter();
+        pw.write(html);
+        pw.close();
+    }
+
+    @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String username = req.getParameter("username");
-        String password = req.getParameter("password");
+        String username = "bob";
+        String password = "bob123";
+        // String username = req.getParameter("username");
+        // String password = req.getParameter("password");
         String expectedPassword = users.get(username.toLowerCase());
         if (expectedPassword == null || !expectedPassword.equals(password)) {
             PrintWriter pw = resp.getWriter();

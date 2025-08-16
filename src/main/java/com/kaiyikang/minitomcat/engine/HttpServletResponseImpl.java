@@ -157,7 +157,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     public void sendRedirect(String location) throws IOException {
         checkNotCommitted();
         this.status = 302;
-        this.headers.setHeader("location", location);
+        this.headers.setHeader("Location", location);
         commitHeaders(-1);
     }
 

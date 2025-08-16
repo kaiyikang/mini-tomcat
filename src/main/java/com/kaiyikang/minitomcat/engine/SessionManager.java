@@ -46,7 +46,7 @@ public class SessionManager implements Runnable {
     public void run() {
         for (;;) {
             try {
-                Thread.sleep(60_0000L);
+                Thread.sleep(6_0000L); // 60000 ms = 60 s = 1 min
             } catch (InterruptedException e) {
                 break;
             }

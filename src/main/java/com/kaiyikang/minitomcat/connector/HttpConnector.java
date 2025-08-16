@@ -25,6 +25,8 @@ import com.kaiyikang.minitomcat.engine.ServletContextImpl;
 import com.kaiyikang.minitomcat.engine.filter.HelloFilter;
 import com.kaiyikang.minitomcat.engine.filter.LogFilter;
 import com.kaiyikang.minitomcat.engine.servlet.IndexServlet;
+import com.kaiyikang.minitomcat.engine.servlet.LoginServlet;
+import com.kaiyikang.minitomcat.engine.servlet.LogoutServlet;
 import com.kaiyikang.minitomcat.engine.servlet.HelloServlet;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -41,7 +43,8 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
 
     public HttpConnector() throws IOException {
         // Define the classes, filters
-        List<Class<?>> definedClasses = List.of(IndexServlet.class, HelloServlet.class);
+        List<Class<?>> definedClasses = List.of(IndexServlet.class, HelloServlet.class, LoginServlet.class,
+                LogoutServlet.class);
         List<Class<?>> definedFilters = List.of(LogFilter.class, HelloFilter.class);
 
         // Initialize the servlets with claess

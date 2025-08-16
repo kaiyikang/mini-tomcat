@@ -93,7 +93,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         Cookie[] cookies = getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if ("JSEEIONID".equals(cookie.getName())) {
+                if ("JSESSIONID".equals(cookie.getName())) {
                     sessionId = cookie.getValue();
                     break;
                 }
@@ -110,7 +110,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             }
             sessionId = UUID.randomUUID().toString();
             // Set Cookie
-            String cookieValue = "JESSIONID=" + sessionId + "; Path=/; SameSite=Strict; HttpOnly";
+            String cookieValue = "JSESSIONID=" + sessionId + "; Path=/; SameSite=Strict; HttpOnly";
             this.response.addHeader("Set-Cookie", cookieValue);
         }
         return this.servletContext.sessionManager.getSession(sessionId);
@@ -279,8 +279,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getProtocol() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getProtocol'");
+        return null;
     }
 
     @Override

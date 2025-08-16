@@ -46,7 +46,7 @@ public class ServletContextImpl implements ServletContext {
 
     final Logger logger = LoggerFactory.getLogger(getClass());
 
-    final SessionManager sessionManager = new SessionManager(this, 600);
+    final SessionManager sessionManager = new SessionManager(this, 10);
 
     private Map<String, ServletRegistrationImpl> servletRegistrations = new HashMap<>();
     private Map<String, FilterRegistrationImp> filterRegistrations = new HashMap<>();
