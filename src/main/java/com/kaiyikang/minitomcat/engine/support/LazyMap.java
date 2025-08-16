@@ -5,10 +5,16 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class LazyMap<V> {
 
     private Map<String, V> map = null;
+    private final boolean concurrent;
+
+    public LazyMap(boolean concurrent) {
+        this.concurrent = concurrent;
+    }
 
     protected V get(String name) {
         if (this.map == null) {
@@ -40,7 +46,7 @@ public class LazyMap<V> {
 
     protected V put(String name, V value) {
         if (this.map == null) {
-            this.map = new HashMap<>();
+            this.map = concurrent ? new ConcurrentHashMap<>() : new HashMap<>();
         }
         return this.map.put(name, value);
     }

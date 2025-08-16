@@ -55,7 +55,7 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
         int port = 8080;
         this.httpServer = HttpServer.create(new InetSocketAddress(host, port), 0, "/", this);
         this.httpServer.start();
-        logger.info("mini tomcat http server started at {} : {} ...", host, port);
+        logger.info("mini tomcat http server started at {}:{} ...", host, port);
     }
 
     @Override

@@ -54,11 +54,11 @@ public class HttpUtils {
     }
 
     public static Cookie[] parseCookies(String cookieValue) {
-        if (cookieValue.isBlank()) {
+        if (cookieValue == null) {
             return null;
         }
         cookieValue = cookieValue.strip();
-        if (cookieValue.isBlank()) {
+        if (cookieValue.isEmpty()) {
             return null;
         }
         String[] ss = cookieValue.split(";");

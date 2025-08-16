@@ -204,8 +204,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public ServletRegistration.Dynamic addServlet(String servletName, String className) {
 
-        // or className == null || className.isEmpty()
-        if (className.isBlank()) {
+        if (className == null || className.isEmpty()) {
             throw new IllegalArgumentException("class name is null or empty.");
         }
         Servlet servlet = null;
@@ -265,7 +264,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(String filterName, String className) {
-        if (className.isBlank()) {
+        if (className == null || className.isEmpty()) {
             throw new IllegalArgumentException("class name is null or empty.");
         }
         Filter filter = null;

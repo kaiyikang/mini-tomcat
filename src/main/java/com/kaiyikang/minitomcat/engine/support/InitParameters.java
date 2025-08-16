@@ -8,11 +8,15 @@ import java.util.Set;
 
 public class InitParameters extends LazyMap<String> {
 
+    public InitParameters() {
+        super(false);
+    }
+
     public boolean setInitParameter(String name, String value) {
-        if (name.isBlank()) {
+        if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Name is null or empty.");
         }
-        if (value.isBlank()) {
+        if (value == null || value.isEmpty()) {
             throw new IllegalArgumentException("Value is null or empty.");
         }
         if (super.containsKey(name)) {

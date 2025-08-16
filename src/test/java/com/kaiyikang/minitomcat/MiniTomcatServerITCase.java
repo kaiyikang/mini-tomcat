@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 @Timeout(7)
+
 public class MiniTomcatServerITCase {
 
     private static Thread serverThread;
