@@ -89,7 +89,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public HttpSession getSession(boolean create) {
         String sessionId = null;
 
-        // Find Cookie
+        // Find Cookie from client
         Cookie[] cookies = getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
@@ -103,7 +103,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         if (sessionId == null && !create) {
             return null;
         }
-        // Create ID
+        // Create ID in session of server
         if (sessionId == null) {
             if (this.response.isCommitted()) {
                 throw new IllegalStateException("Cannot create session for response is committed.");

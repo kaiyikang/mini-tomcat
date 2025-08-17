@@ -3,5 +3,6 @@
   "cSpell.words": ["kaiyikang", "logback", "minitomcat"],
   "editor.accessibilitySupport": "off",
   "editor.parameterHints.enabled": false,
-  "editor.suggest.snippetsPreventQuickSuggestions": false
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "cSpell.language": "en,de-de"
 }

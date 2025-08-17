@@ -47,9 +47,8 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
                 LogoutServlet.class);
         List<Class<?>> definedFilters = List.of(LogFilter.class, HelloFilter.class);
 
-        // Initialize the servlets with claess
+        // Initialize the servlets with classes
         this.servletContext = new ServletContextImpl();
-        // this.servletContext.initialize(definedClasses);
         this.servletContext.initServlets(definedClasses);
         this.servletContext.initFilters(definedFilters);
 
@@ -68,6 +67,7 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
+        // Where each request and response occurs
         logger.info("{}: {}?{}", exchange.getRequestMethod(), exchange.getRequestURI().getPath(),
                 exchange.getRequestURI().getRawQuery());
         var adaptor = new HttpExchangeAdapter(exchange);
