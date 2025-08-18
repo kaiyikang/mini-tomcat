@@ -245,18 +245,17 @@ When you choose to proceed, the stairwell (`FilterChainImpl`) automatically take
 
 ## HttpSession
 
-client 负责保存 cookie，而服务器负责保存 session，两者通过 sessionId 匹配。
+Client is responsible for storing cookies, while the server is responsible for storing sessions. These two are matched via a `sessionId`.
 
-当请求进入时，需要将 servletContext 和 response 作为参数初始化 HttpServletRequestImpl。
+When a request comes in, `HttpServletRequestImpl` needs to be initialized with `servletContext` and `response` as parameters.
 
-具体来说，在 HttpServletRequestImpl 中，它会首先检查来自 client 中 cookie 以 JSESSIONID 为 key 的值，如果有，通过 servletContext 所包含的 sessionManager，获取对应 session。同时，并将 sessionId 放置在 response 的 header 中，即告诉 client，你应该将 sessionId 放在 cookie 里面。
+Specifically, within `HttpServletRequestImpl`, it first checks the client's cookies for a value associated with the key `JSESSIONID`. If found, it retrieves the corresponding session via the `sessionManager` contained within the `servletContext`. Concurrently, the `sessionId` is placed in the `response` header, effectively instructing the client to store this `sessionId` in its cookies for future requests.
 
-在 sessionManager 中，由于所有请求都分享同一个 sessions map，为了防止出现多线程问题，所以使用 ConcurrentHashMap。另外，在该类中开启一个新的线程，它不断查看 session 的有效期，如果发现 session 失效，会立刻清理。
+In the `sessionManager`, since all requests share a single `sessions` map, `ConcurrentHashMap` is used to prevent multithreading issues. Additionally, a new thread is started within this class to continuously monitor session validity. If a session is found to be invalid or expired, it is immediately cleaned up.
 
-在 HttpServletResponseImpl 中，需要额外实现处理 cookie ，跳转以及 commit 逻辑。从中能了解到的是 Committing the response 之后（commitHeaders(0);），就像已经发送的快递单，不能修改 header 了。根据发送流程,发送完快递单，才可以发送内容，即
-写入要传输的数据，getOutputStream 或 getWriter。
+In `HttpServletResponseImpl`, additional logic needs to be implemented for handling cookies, redirects, and the `commit` process. It's crucial to understand that once the response is committed (via `commitHeaders(0);`), it's like a shipping label that has already been sent – the headers can no longer be modified. Following the sending process, only after the 'shipping label' (headers) has been sent can the actual content be transmitted, i.e., by writing data using `getOutputStream` or `getWriter`.
 
-最后，只需要在 servlet 加入具体逻辑就好。例如针对 index，如果找不到 session，就会显示登录页面，而 login servlet，会查看并对比数据库，成功了就更新 session，没成功就返回登录错误页面。
+Finally, the specific business logic can be added within the servlets themselves. For instance, for an `index` servlet, if no session is found, the login page would be displayed. A `login` servlet, on the other hand, would check and compare credentials against a database; if successful, it would update the session, otherwise, it would return an error page indicating a failed login.
 
 ## Milestone
 
