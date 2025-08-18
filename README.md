@@ -264,3 +264,4 @@ Finally, the specific business logic can be added within the servlets themselves
 3. Servlet Module
    1. Servlet Context 2025.08.11 done
    2. FilterChain 2025.08.14 done
+   3. HttpSession 2025.08.18 done
