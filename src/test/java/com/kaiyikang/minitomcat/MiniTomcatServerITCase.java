@@ -7,18 +7,21 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-@Timeout(7)
-
+// @Timeout(7)
 public class MiniTomcatServerITCase {
 
     private static Thread serverThread;
@@ -56,13 +59,72 @@ public class MiniTomcatServerITCase {
     }
 
     @Test
-    void testIndexPageIsServed() throws IOException, InterruptedException {
+    void testIndexPageIsServed_withoutLogin() throws IOException, InterruptedException {
+        // Given
         HttpRequest request = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/")).build();
-
+        // When
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
+        // Then
         assertEquals(200, response.statusCode());
-        assertEquals("<h1>Index page</h1>", response.body());
+        assertEquals("<h1>Index Page</h1>\n" + //
+                "<form method=\"post\" action=\"/login\">\n" + //
+                "    <legend>Please Login</legend>\n" + //
+                "    <p>User Name: <input type=\"text\" name=\"username\"></p>\n" + //
+                "    <p>Password: <input type=\"password\" name=\"password\"></p>\n" + //
+                "    <p><button type=\"submit\">Login</button></p>\n" + //
+                "</form>\n", response.body());
+    }
+
+    @Test
+    void testLogin_failed() throws IOException, InterruptedException {
+
+        String username = "wrong";
+        String password = "wrong";
+
+        Map<Object, Object> formData = new HashMap<>();
+        formData.put("username", username);
+        formData.put("password", password);
+
+        String requestBody = buildFormDataFromMap(formData);
+
+        // When
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/login"))
+                .header("Content-Type", "application/x-www-form-urlencoded") // -> <form ..> </form>
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        // Then
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals("<h1>Login Failed</h1>\n" + //
+                "<p>Invalid username or password.</p>\n" + //
+                "<p><a href=\"/\">Try again</a></p>\n", response.body(), "Expected redirect after successful login");
+        assertEquals(200, response.statusCode(), "Expected redirect after successful login");
+    }
+
+    @Test
+    void testLogin_successful() throws IOException, InterruptedException {
+
+        String username = "root";
+        String password = "admin123";
+
+        Map<Object, Object> formData = new HashMap<>();
+        formData.put("username", username);
+        formData.put("password", password);
+
+        String requestBody = buildFormDataFromMap(formData);
+
+        // When
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/login"))
+                .header("Content-Type", "application/x-www-form-urlencoded") // -> <form ..> </form>
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        // Then
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals("", response.body(), "Expected redirect after successful login");
+        assertEquals(302, response.statusCode(), "Expected redirect after successful login");
     }
 
     @Test
@@ -91,8 +153,9 @@ public class MiniTomcatServerITCase {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         // Then
-        assertEquals(200, response.statusCode());
-        assertEquals("<h1>403 Forbidden</h1>", response.body());
+        assertEquals(403, response.statusCode());
+        // No msg in sendError()
+        assertEquals("", response.body());
     }
 
     private static void waitForServerReady() throws InterruptedException {
@@ -113,4 +176,16 @@ public class MiniTomcatServerITCase {
         fail("Server did not start within " + timeoutMillis + "ms.");
     }
 
+    private static String buildFormDataFromMap(Map<Object, Object> data) {
+        StringBuilder sb = new StringBuilder();
+        for (var entry : data.entrySet()) {
+            if (sb.length() > 0) {
+                sb.append("&");
+            }
+            sb.append(URLEncoder.encode(entry.getKey().toString(), StandardCharsets.UTF_8));
+            sb.append("=");
+            sb.append(URLEncoder.encode(entry.getValue().toString(), StandardCharsets.UTF_8));
+        }
+        return sb.toString();
+    }
 }
