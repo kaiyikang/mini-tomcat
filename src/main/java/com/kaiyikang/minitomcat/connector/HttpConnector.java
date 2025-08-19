@@ -8,6 +8,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.EventListener;
 import java.util.List;
 
 import com.sun.net.httpserver.HttpServer;
@@ -37,20 +38,37 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
 
     final Logger logger = LoggerFactory.getLogger(getClass());
 
-    final HttpServer httpServer;
     final ServletContextImpl servletContext;
+    final HttpServer httpServer;
     final Duration stopDisplay = Duration.ofSeconds(5);
 
     public HttpConnector() throws IOException {
         // Define the classes, filters
-        List<Class<?>> definedClasses = List.of(IndexServlet.class, HelloServlet.class, LoginServlet.class,
+        List<Class<?>> definedClasses = List.of(
+                IndexServlet.class,
+                HelloServlet.class,
+                LoginServlet.class,
                 LogoutServlet.class);
-        List<Class<?>> definedFilters = List.of(LogFilter.class, HelloFilter.class);
+        List<Class<?>> definedFilters = List.of(
+                LogFilter.class,
+                HelloFilter.class);
 
         // Initialize the servlets with classes
         this.servletContext = new ServletContextImpl();
         this.servletContext.initServlets(definedClasses);
         this.servletContext.initFilters(definedFilters);
+
+        // Define Listener
+        List<Class<? extends EventListener>> definedListeners = List.of(
+                HelloHttpSessionAttributeListener.class,
+                HelloHttpSessionListener.class,
+                HelloServletContextAttributeListener.class,
+                HelloServletContextListener.class,
+                HelloServletRequestAttributeListener.class,
+                HelloServletRequestListener.class);
+        for (var listener : definedListeners) {
+            this.servletContext.addListener(listener);
+        }
 
         // Start Http Server
         String host = "0.0.0.0";

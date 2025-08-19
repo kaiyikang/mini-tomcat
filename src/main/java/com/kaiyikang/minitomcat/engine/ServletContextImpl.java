@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.kaiyikang.minitomcat.engine.mapping.ServletMapping;
+import com.kaiyikang.minitomcat.engine.support.Attributes;
 import com.kaiyikang.minitomcat.engine.mapping.FilterMapping;
 
 import com.kaiyikang.minitomcat.utils.AnnoUtils;
@@ -32,8 +33,14 @@ import jakarta.servlet.FilterRegistration;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.Servlet;
 import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextAttributeEvent;
+import jakarta.servlet.ServletContextAttributeListener;
+import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRegistration;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletRequestAttributeListener;
+import jakarta.servlet.ServletRequestListener;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.SessionCookieConfig;
@@ -41,12 +48,15 @@ import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSessionAttributeListener;
+import jakarta.servlet.http.HttpSessionListener;
 
 public class ServletContextImpl implements ServletContext {
 
     final Logger logger = LoggerFactory.getLogger(getClass());
 
     final SessionManager sessionManager = new SessionManager(this, 10);
+    private Attributes attributes = new Attributes(true);
 
     private Map<String, ServletRegistrationImpl> servletRegistrations = new HashMap<>();
     private Map<String, FilterRegistrationImp> filterRegistrations = new HashMap<>();
@@ -56,6 +66,13 @@ public class ServletContextImpl implements ServletContext {
 
     final List<ServletMapping> servletMappings = new ArrayList<>();
     final List<FilterMapping> filterMappings = new ArrayList<>();
+
+    private List<ServletContextListener> servletContextListeners = null;
+    private List<ServletContextAttributeListener> servletContextAttributeListeners = null;
+    private List<ServletRequestListener> servletRequestListeners = null;
+    private List<ServletRequestAttributeListener> servletRequestAttributeListeners = null;
+    private List<HttpSessionListener> httpSessionListeners = null;
+    private List<HttpSessionAttributeListener> httpSessionAttributeListeners = null;
 
     public void initFilters(List<Class<?>> filterClasses) {
         // Load Filter Classes
@@ -157,6 +174,71 @@ public class ServletContextImpl implements ServletContext {
             logger.error(e.getMessage(), e);
             throw e;
         }
+    }
+
+    @Override
+    public void addListener(String className) {
+        EventListener listener = null;
+        try {
+            Class<EventListener> clazz = createInstance(className);
+            listener = createInstance(clazz);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        addListener(listener);
+    }
+
+    @Override
+    public <T extends EventListener> void addListener(T t) {
+
+    }
+
+    @Override
+    public void addListener(Class<? extends EventListener> listenerClass) {
+
+    }
+
+    // Begin of Invoke listeners
+    void invokeServletContextAttributeAdded(String name, Object object) {
+        logger.info("invoke ServletContextAttributeAdded: {} = {}", name, object);
+        if (this.servletContextAttributeListeners != null) {
+            var event = new ServletContextAttributeEvent(this, name, object);
+            for (var listener : this.servletContextAttributeListeners) {
+                listener.attributeAdded(event);
+            }
+        }
+    }
+
+    // End of Invoke listeners
+
+    @Override
+    public Object getAttribute(String name) {
+        return this.attributes.getAttribute(name);
+    }
+
+    @Override
+    public Enumeration<String> getAttributeNames() {
+        return this.attributes.getAttributeNames();
+    }
+
+    @Override
+    public void setAttribute(String name, Object object) {
+        if (object == null) {
+            removeAttribute(name);
+        } else {
+            Object old = this.attributes.setAttribute(name, object);
+            if (old == null) {
+                this.invokeServletContextAttributeAdded(name, object);
+            } else {
+                this.invokeServletContextAttributeReplaced(name, object);
+            }
+        }
+    }
+
+    @Override
+    public void removeAttribute(String name) {
+        Object old = this.attributes.getAttribute(name);
+        this.invokeServletContextAttributeRemoved(name);
     }
 
     @Override
@@ -422,30 +504,6 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public Object getAttribute(String name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAttribute'");
-    }
-
-    @Override
-    public Enumeration<String> getAttributeNames() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAttributeNames'");
-    }
-
-    @Override
-    public void setAttribute(String name, Object object) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setAttribute'");
-    }
-
-    @Override
-    public void removeAttribute(String name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'removeAttribute'");
-    }
-
-    @Override
     public String getServletContextName() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getServletContextName'");
@@ -479,24 +537,6 @@ public class ServletContextImpl implements ServletContext {
     public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getEffectiveSessionTrackingModes'");
-    }
-
-    @Override
-    public void addListener(String className) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addListener'");
-    }
-
-    @Override
-    public <T extends EventListener> void addListener(T t) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addListener'");
-    }
-
-    @Override
-    public void addListener(Class<? extends EventListener> listenerClass) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addListener'");
     }
 
     @Override
