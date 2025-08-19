@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.management.RuntimeErrorException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -189,12 +191,18 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public <T extends EventListener> void addListener(T t) {
-
+    public void addListener(Class<? extends EventListener> listenerClass) {
+        EventListener listener = null;
+        try {
+            listener = createInstance(listenerClass);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        addListener(listener);
     }
 
     @Override
-    public void addListener(Class<? extends EventListener> listenerClass) {
+    public <T extends EventListener> void addListener(T t) {
 
     }
 
