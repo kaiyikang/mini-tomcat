@@ -209,8 +209,7 @@ public class ServletContextImpl implements ServletContext {
         }
         Servlet servlet = null;
         try {
-            Class<? extends Servlet> clazz = createInstance(className);
-            servlet = createInstance(clazz);
+            servlet = createInstance(className);
         } catch (ServletException e) {
             throw new RuntimeException(e);
         }
@@ -341,9 +340,14 @@ public class ServletContextImpl implements ServletContext {
         return 0;
     }
 
+    @SuppressWarnings("unchecked")
     private <T> T createInstance(String className) throws ServletException {
-        Class<T> clazz = null;
-
+        Class<T> clazz;
+        try {
+            clazz = (Class<T>) Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("Class not found.", e);
+        }
         return createInstance(clazz);
     }
 
