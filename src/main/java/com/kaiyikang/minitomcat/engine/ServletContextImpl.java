@@ -41,7 +41,9 @@ import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRegistration;
 import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletRequestAttributeEvent;
 import jakarta.servlet.ServletRequestAttributeListener;
+import jakarta.servlet.ServletRequestEvent;
 import jakarta.servlet.ServletRequestListener;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.annotation.WebServlet;
@@ -50,7 +52,10 @@ import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpSessionAttributeListener;
+import jakarta.servlet.http.HttpSessionBindingEvent;
+import jakarta.servlet.http.HttpSessionEvent;
 import jakarta.servlet.http.HttpSessionListener;
 
 public class ServletContextImpl implements ServletContext {
@@ -137,7 +142,8 @@ public class ServletContextImpl implements ServletContext {
         }
     }
 
-    public void process(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+    public void process(HttpServletRequestImpl request, HttpServletResponseImpl response)
+            throws IOException, ServletException {
         String uri = request.getRequestURI();
 
         // Find the matched servlet
@@ -149,9 +155,10 @@ public class ServletContextImpl implements ServletContext {
             }
         }
         if (servlet == null) {
-            PrintWriter pm = response.getWriter();
-            pm.write("<h1>404 Not Found</h1> <p>No mapping for URL: " + uri + "</p>");
-            pm.close();
+            PrintWriter pw = response.getWriter();
+            pw.write("<h1>404 Not Found</h1> <p>No mapping for URL: " + uri + "</p>");
+            pw.flush();
+            response.cleanup();
             return;
         }
 
@@ -203,7 +210,39 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> void addListener(T t) {
-
+        if (t instanceof ServletContextListener listener) {
+            if (this.servletContextListeners == null) {
+                this.servletContextListeners = new ArrayList<>();
+            }
+            this.servletContextListeners.add(listener);
+        } else if (t instanceof ServletContextAttributeListener listener) {
+            if (this.servletContextAttributeListeners == null) {
+                this.servletContextAttributeListeners = new ArrayList<>();
+            }
+            this.servletContextAttributeListeners.add(listener);
+        } else if (t instanceof ServletRequestListener listener) {
+            if (this.servletRequestListeners == null) {
+                this.servletRequestListeners = new ArrayList<>();
+            }
+            this.servletRequestListeners.add(listener);
+        } else if (t instanceof ServletRequestAttributeListener listener) {
+            if (this.servletRequestAttributeListeners == null) {
+                this.servletRequestAttributeListeners = new ArrayList<>();
+            }
+            this.servletRequestAttributeListeners.add(listener);
+        } else if (t instanceof HttpSessionAttributeListener listener) {
+            if (this.httpSessionAttributeListeners == null) {
+                this.httpSessionAttributeListeners = new ArrayList<>();
+            }
+            this.httpSessionAttributeListeners.add(listener);
+        } else if (t instanceof HttpSessionListener listener) {
+            if (this.httpSessionListeners == null) {
+                this.httpSessionListeners = new ArrayList<>();
+            }
+            this.httpSessionListeners.add(listener);
+        } else {
+            throw new IllegalArgumentException("Unsupported listener: " + t.getClass().getName());
+        }
     }
 
     // Begin of Invoke listeners
@@ -213,6 +252,126 @@ public class ServletContextImpl implements ServletContext {
             var event = new ServletContextAttributeEvent(this, name, object);
             for (var listener : this.servletContextAttributeListeners) {
                 listener.attributeAdded(event);
+            }
+        }
+    }
+
+    void invokeServletContextAttributeRemoved(String name, Object value) {
+        logger.info("invoke ServletContextAttributeRemoved: {} = {}", name, value);
+        if (this.servletContextAttributeListeners != null) {
+            var event = new ServletContextAttributeEvent(this, name, value);
+            for (var listener : this.servletContextAttributeListeners) {
+                listener.attributeRemoved(event);
+            }
+        }
+    }
+
+    void invokeServletContextAttributeReplaced(String name, Object value) {
+        logger.info("invoke ServletContextAttributeReplaced: {} = {}", name, value);
+        if (this.servletContextAttributeListeners != null) {
+            var event = new ServletContextAttributeEvent(this, name, value);
+            for (var listener : this.servletContextAttributeListeners) {
+                listener.attributeReplaced(event);
+            }
+        }
+    }
+
+    void invokeServletRequestAttributeAdded(HttpServletRequest request, String name, Object value) {
+        logger.info("invoke ServletRequestAttributeAdded: {} = {}", name, value);
+        if (this.servletRequestAttributeListeners != null) {
+            var event = new ServletRequestAttributeEvent(this, request, name, value);
+            for (var listener : this.servletRequestAttributeListeners) {
+                listener.attributeAdded(event);
+            }
+        }
+    }
+
+    void invokeServletRequestAttributeRemoved(HttpServletRequest request, String name, Object value) {
+        logger.info("invoke invokeServletRequestAttributeRemoved: {} = {}", name, value);
+        if (this.servletRequestAttributeListeners != null) {
+            var event = new ServletRequestAttributeEvent(this, request, name, value);
+            for (var listener : this.servletRequestAttributeListeners) {
+                listener.attributeRemoved(event);
+            }
+        }
+    }
+
+    void invokeServletRequestAttributeReplaced(HttpServletRequest request, String name, Object value) {
+        logger.info("invoke ServletRequestAttributeReplaced: {} = {}, request = {}", name, value, request);
+        if (this.servletRequestAttributeListeners != null) {
+            var event = new ServletRequestAttributeEvent(this, request, name, value);
+            for (var listener : this.servletRequestAttributeListeners) {
+                listener.attributeReplaced(event);
+            }
+        }
+    }
+
+    void invokeHttpSessionAttributeAdded(HttpSession session, String name, Object value) {
+        logger.info("invoke HttpSessionAttributeAdded: {} = {}, session = {}", name, value, session);
+        if (this.httpSessionAttributeListeners != null) {
+            var event = new HttpSessionBindingEvent(session, name, value);
+            for (var listener : this.httpSessionAttributeListeners) {
+                listener.attributeAdded(event);
+            }
+        }
+    }
+
+    void invokeHttpSessionAttributeRemoved(HttpSession session, String name, Object value) {
+        logger.info("invoke ServletContextAttributeRemoved: {} = {}, session = {}", name, value, session);
+        if (this.httpSessionAttributeListeners != null) {
+            var event = new HttpSessionBindingEvent(session, name, value);
+            for (var listener : this.httpSessionAttributeListeners) {
+                listener.attributeRemoved(event);
+            }
+        }
+    }
+
+    void invokeHttpSessionAttributeReplaced(HttpSession session, String name, Object value) {
+        logger.info("invoke ServletContextAttributeReplaced: {} = {}, session = {}", name, value, session);
+        if (this.httpSessionAttributeListeners != null) {
+            var event = new HttpSessionBindingEvent(session, name, value);
+            for (var listener : this.httpSessionAttributeListeners) {
+                listener.attributeReplaced(event);
+            }
+        }
+    }
+
+    void invokeServletRequestInitialized(HttpServletRequest request) {
+        logger.info("invoke ServletRequestInitialized: request = {}", request);
+        if (this.servletRequestListeners != null) {
+            var event = new ServletRequestEvent(this, request);
+            for (var listener : this.servletRequestListeners) {
+                listener.requestInitialized(event);
+            }
+        }
+    }
+
+    void invokeServletRequestDestroyed(HttpServletRequest request) {
+        logger.info("invoke ServletRequestDestroyed: request = {}", request);
+        if (this.servletRequestListeners != null) {
+            var event = new ServletRequestEvent(this, request);
+            for (var listener : this.servletRequestListeners) {
+                listener.requestDestroyed(event);
+            }
+        }
+    }
+
+    void invokeHttpSessionCreated(HttpSession session) {
+        logger.info("invoke HttpSessionCreated: session = {}", session);
+        if (this.httpSessionListeners != null) {
+            var event = new HttpSessionEvent(session);
+            for (var listener : this.httpSessionListeners) {
+                listener.sessionCreated(event);
+            }
+        }
+    }
+
+    void invokeHttpSessionDestroyed(HttpSession session) {
+        logger.info("invoke HttpSessionDestroyed: session = {}", session);
+        if (this.httpSessionListeners != null) {
+            var event = new HttpSessionEvent(session);
+            for (var listener : this.httpSessionListeners) {
+                listener.sessionDestroyed(event);
             }
         }
     }
@@ -246,7 +405,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public void removeAttribute(String name) {
         Object old = this.attributes.getAttribute(name);
-        this.invokeServletContextAttributeRemoved(name);
+        this.invokeServletContextAttributeRemoved(name, old);
     }
 
     @Override
