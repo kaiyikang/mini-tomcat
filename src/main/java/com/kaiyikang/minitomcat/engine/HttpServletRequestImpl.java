@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.Collection;
@@ -14,6 +15,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+
+import com.kaiyikang.minitomcat.engine.support.Attributes;
 
 import com.kaiyikang.minitomcat.connector.HttpExchangeRequest;
 import com.kaiyikang.minitomcat.engine.support.HttpHeaders;
@@ -41,8 +44,15 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     final ServletContextImpl servletContext;
     final HttpExchangeRequest exchangeRequest;
     final HttpServletResponse response;
+    final String method;
     final HttpHeaders headers;
     final Parameters parameters;
+
+    String characterEncoding;
+    int contentLength = 0;
+
+    String reqeustId = null;
+    Attributes attributes = new Attributes();
 
     Boolean inputCalled = null;
 
@@ -51,18 +61,63 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         this.servletContext = servletContext;
         this.exchangeRequest = exchangeRequest;
         this.response = response;
+
+        this.characterEncoding = "UTF-8";
+        this.method = exchangeRequest.getRequestMethod();
         this.headers = new HttpHeaders(exchangeRequest.getRequestHeaders());
         this.parameters = new Parameters(exchangeRequest, "UTF-8");
+
+        if ("POST".equals(this.method) || "PUT".equals(this.method) || "DELETE".equals(this.method)
+                || "PATCH".equals(this.method)) {
+            this.contentLength = getIntHeader("Content-Length");
+        }
     }
 
     @Override
-    public String getMethod() {
-        return exchangeRequest.getRequestMethod();
+    public String getCharacterEncoding() {
+        return this.characterEncoding;
     }
 
     @Override
-    public String getRequestURI() {
-        return exchangeRequest.getRequestURI().getPath();
+    public void setCharacterEncoding(String env) throws UnsupportedEncodingException {
+        this.characterEncoding = env;
+        this.parameters.setCharSet(env);
+    }
+
+    @Override
+    public int getContentLength() {
+        return this.contentLength;
+    }
+
+    @Override
+    public long getContentLengthLong() {
+        return this.contentLength;
+    }
+
+    @Override
+    public String getContentType() {
+        return getHeader("Content-Type");
+    }
+
+    @Override
+    public ServletInputStream getInputStream() throws IOException {
+        if (this.inputCalled == null) {
+            this.inputCalled = Boolean.TRUE;
+            return new ServletInputStreamImpl(this.exchangeRequest.getRequestBody());
+        }
+        throw new IllegalStateException("Cannot reopen input stream after "
+                + (this.inputCalled ? "getInputStream()" : "getReader()") + " was called");
+    }
+
+    @Override
+    public BufferedReader getReader() throws IOException {
+        if (this.inputCalled == null) {
+            this.inputCalled = Boolean.FALSE;
+            return new BufferedReader(new InputStreamReader(
+                    new ByteArrayInputStream(this.exchangeRequest.getRequestBody()), StandardCharsets.UTF_8));
+        }
+        throw new IllegalStateException("Cannot reopen input stream after "
+                + (this.inputCalled ? "getInputStream()" : "getReader()") + " was called.");
     }
 
     @Override
@@ -83,6 +138,171 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Map<String, String[]> getParameterMap() {
         return this.parameters.getParameterMap();
+    }
+
+    @Override
+    public String getProtocol() {
+        return "HTTP/1.1";
+    }
+
+    @Override
+    public String getSchema() {
+        return "http";
+    }
+
+    @Override
+    public String getServerName() {
+        return "localhost";
+    }
+
+    @Override
+    public String getServerPort() {
+        InetSocketAddress address = this.exchangeRequest.getLocalAddress();
+        return address.getPort();
+    }
+
+    @Override
+    public Locale getLocale() {
+        return Locale.CHINA;
+    }
+
+    @Override
+    public Enumeration<Locale> getLocales() {
+        return Collections.enumeration(List.of(Locale.CHINA, Locale.US));
+    }
+
+    @Override
+    public boolean isSecure() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'isSecure'");
+    }
+
+    @Override
+    public RequestDispatcher getRequestDispatcher(String arg0) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getRequestDispatcher'");
+    }
+
+    @Override
+    public ServletContext getServletContext() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getServletContext'");
+    }
+
+    @Override
+    public AsyncContext startAsync() throws IllegalStateException {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'startAsync'");
+    }
+
+    @Override
+    public AsyncContext startAsync(ServletRequest arg0, ServletResponse arg1) throws IllegalStateException {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'startAsync'");
+    }
+
+    @Override
+    public boolean isAsyncStarted() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'isAsyncStarted'");
+    }
+
+    @Override
+    public boolean isAsyncSupported() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'isAsyncSupported'");
+    }
+
+    @Override
+    public AsyncContext getAsyncContext() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAsyncContext'");
+    }
+
+    @Override
+    public DispatcherType getDispatcherType() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getDispatcherType'");
+    }
+
+    @Override
+    public String getRequestId() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getRequestId'");
+    }
+
+    @Override
+    public String getProtocolRequestId() {
+        return "";
+    }
+
+    @Override
+    public ServletConnection getServletConnection() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getServletConnection'");
+    }
+
+    @Override
+    public String getAuthType() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAuthType'");
+    }
+
+    @Override
+    public Cookie[] getCookies() {
+        String cookieValue = this.getHeader("Cookie");
+        return HttpUtils.parseCookies(cookieValue);
+    }
+
+    // -------------------------------------------------------------------------------------------------
+    @Override
+    public String getMethod() {
+        return exchangeRequest.getRequestMethod();
+    }
+
+    @Override
+    public String getPathInfo() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getPathInfo'");
+    }
+
+    @Override
+    public String getPathTranslated() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getPathTranslated'");
+    }
+
+    @Override
+    public String getContextPath() {
+        return "";
+    }
+
+    @Override
+    public String getRemoteUser() {
+        // not support auth:
+        return null;
+    }
+
+    @Override
+    public boolean isUserInRole(String role) {
+        // not support auth:
+        return false;
+    }
+
+    @Override
+    public Principal getUserPrincipal() {
+        // not support auth:
+        return null;
+    }
+
+    @Override
+    public String getRequestedSessionId() {
+        return null;
+    }
+
+    @Override
+    public String getRequestURI() {
+        return exchangeRequest.getRequestURI().getPath();
     }
 
     @Override
@@ -142,33 +362,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public Cookie[] getCookies() {
-        String cookieValue = this.getHeader("Cookie");
-        return HttpUtils.parseCookies(cookieValue);
-    }
-
-    @Override
-    public ServletInputStream getInputStream() throws IOException {
-        if (this.inputCalled == null) {
-            this.inputCalled = Boolean.TRUE;
-            return new ServletInputStreamImpl(this.exchangeRequest.getRequestBody());
-        }
-        throw new IllegalStateException("Cannot reopen input stream after "
-                + (this.inputCalled ? "getInputStream()" : "getReader()") + " was called");
-    }
-
-    @Override
-    public BufferedReader getReader() throws IOException {
-        if (this.inputCalled == null) {
-            this.inputCalled = Boolean.FALSE;
-            return new BufferedReader(new InputStreamReader(
-                    new ByteArrayInputStream(this.exchangeRequest.getRequestBody()), StandardCharsets.UTF_8));
-        }
-        throw new IllegalStateException("Cannot reopen input stream after "
-                + (this.inputCalled ? "getInputStream()" : "getReader()") + " was called.");
-    }
-
-    @Override
     public long getDateHeader(String name) {
         return this.headers.getDateHeader(name);
     }
@@ -200,12 +393,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     // ========= Not implement yet =========
 
     @Override
-    public AsyncContext getAsyncContext() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAsyncContext'");
-    }
-
-    @Override
     public Object getAttribute(String arg0) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getAttribute'");
@@ -215,36 +402,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public Enumeration<String> getAttributeNames() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getAttributeNames'");
-    }
-
-    @Override
-    public String getCharacterEncoding() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getCharacterEncoding'");
-    }
-
-    @Override
-    public int getContentLength() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getContentLength'");
-    }
-
-    @Override
-    public long getContentLengthLong() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getContentLengthLong'");
-    }
-
-    @Override
-    public String getContentType() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getContentType'");
-    }
-
-    @Override
-    public DispatcherType getDispatcherType() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getDispatcherType'");
     }
 
     @Override
@@ -266,29 +423,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public Locale getLocale() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getLocale'");
-    }
-
-    @Override
-    public Enumeration<Locale> getLocales() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getLocales'");
-    }
-
-    @Override
-    public String getProtocol() {
-        return null;
-    }
-
-    @Override
-    public String getProtocolRequestId() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getProtocolRequestId'");
-    }
-
-    @Override
     public String getRemoteAddr() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getRemoteAddr'");
@@ -307,63 +441,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public RequestDispatcher getRequestDispatcher(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRequestDispatcher'");
-    }
-
-    @Override
-    public String getRequestId() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRequestId'");
-    }
-
-    @Override
     public String getScheme() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getScheme'");
-    }
-
-    @Override
-    public String getServerName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServerName'");
-    }
-
-    @Override
-    public int getServerPort() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServerPort'");
-    }
-
-    @Override
-    public ServletConnection getServletConnection() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServletConnection'");
-    }
-
-    @Override
-    public ServletContext getServletContext() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServletContext'");
-    }
-
-    @Override
-    public boolean isAsyncStarted() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isAsyncStarted'");
-    }
-
-    @Override
-    public boolean isAsyncSupported() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isAsyncSupported'");
-    }
-
-    @Override
-    public boolean isSecure() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isSecure'");
     }
 
     @Override
@@ -379,39 +459,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public void setCharacterEncoding(String arg0) throws UnsupportedEncodingException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setCharacterEncoding'");
-    }
-
-    @Override
-    public AsyncContext startAsync() throws IllegalStateException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'startAsync'");
-    }
-
-    @Override
-    public AsyncContext startAsync(ServletRequest arg0, ServletResponse arg1) throws IllegalStateException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'startAsync'");
-    }
-
-    @Override
     public boolean authenticate(HttpServletResponse arg0) throws IOException, ServletException {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'authenticate'");
-    }
-
-    @Override
-    public String getAuthType() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAuthType'");
-    }
-
-    @Override
-    public String getContextPath() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getContextPath'");
     }
 
     @Override
@@ -427,27 +477,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public String getPathInfo() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPathInfo'");
-    }
-
-    @Override
-    public String getPathTranslated() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPathTranslated'");
-    }
-
-    @Override
     public String getQueryString() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getQueryString'");
-    }
-
-    @Override
-    public String getRemoteUser() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRemoteUser'");
     }
 
     @Override
@@ -457,28 +489,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public String getRequestedSessionId() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRequestedSessionId'");
-    }
-
-    @Override
     public String getServletPath() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getServletPath'");
     }
 
     @Override
-    public Principal getUserPrincipal() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getUserPrincipal'");
-    }
-
-    @Override
-    public boolean isUserInRole(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isUserInRole'");
-    }
 
     @Override
     public void login(String arg0, String arg1) throws ServletException {
