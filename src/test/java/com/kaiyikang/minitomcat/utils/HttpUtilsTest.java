@@ -27,7 +27,7 @@ public class HttpUtilsTest {
     private Headers mockHeaders;
 
     @Nested
-    @DisplayName("")
+    @DisplayName("Functionalities of headers")
     class Header {
 
         @Test
