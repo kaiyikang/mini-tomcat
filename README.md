@@ -275,6 +275,34 @@ Finally, this trigger function is called from the methods that are meant to fire
 
 In summary, specific server-side logic triggers a notification function. This function, in turn, invokes the pre-registered listeners, effectively broadcasting the event to all interested parties.
 
+## Web App
+
+根据规范，之前所提到的组件，Servlet、Filter 和 Listener 等，均应该按照规范打包为 war 文件，Web 服务器会加载文件。规范的范例如下：
+
+```
+hello-webapp
+├── WEB-INF
+│   ├── classes
+│   │   └── com
+│   │       └── example
+│   │           ├── filter
+│   │           │   └── LogFilter.class
+│   │           ├── listener
+│   │           │   ├── HelloHttpSessionListener.class
+│   │           │   └── HelloServletContextAttributeListener.class
+│   │           ├── servlet
+│   │           │   ├── HelloServlet.class
+│   │           │   └── IndexServlet.class
+│   │           └── util
+│   │               └── DateUtil.class
+│   └── lib
+│       ├── logback-classic-1.4.6.jar
+│       ├── logback-core-1.4.6.jar
+│       └── slf4j-api-2.0.4.jar
+├── contact.html
+└── favicon.ico
+```
+
 ## Milestone
 
 1. SimpleHttpServer done
