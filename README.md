@@ -257,6 +257,22 @@ In `HttpServletResponseImpl`, additional logic needs to be implemented for handl
 
 Finally, the specific business logic can be added within the servlets themselves. For instance, for an `index` servlet, if no session is found, the login page would be displayed. A `login` servlet, on the other hand, would check and compare credentials against a database; if successful, it would update the session, otherwise, it would return an error page indicating a failed login.
 
+## Listener
+
+Listener 用于监听 Web 应用中产生的事件。比如当服务器初始化 ServletContext 时，会触发事件，而实现了该接接口的 listener 可以处理该事件，具体如何处理，可以自己定制，例如数据编码解码，或加载配置文件等。
+
+该机制基于[观察者模式](https://en.wikipedia.org/wiki/Observer_pattern)。当事件发生的时候，已经注册过的 listener 会接收到事件，并执行操作。
+
+Servlet 规范定义了不同的 Listener 接口，它们被用来监听不同类型和运行时的事件。
+
+首先，实现一个`ServletContextAttributeListener`接口的 Listener，然后在`ServletContextImpl`中，使用`addListener()`方法注册它。在方法中，会使用大量的 if-else 语句，根据所实现的不同接口存储在不同类别的 Listener List 中。
+
+然后我们在`ServletContextImpl`实现触发函数。它以 event 作为输入，调用 Listener List 中的 list，从而实现触发或说调用逻辑。
+
+最后，我们需要在需要触发的逻辑中，比如 `setAttribute()` 或 `removeAttribute()` 中，插入刚才实现的触发函数。
+
+总结来说，服务器中具体的逻辑会触发通知函数，该通知函数会继续触发提前登记好的 listener，从而实现广播。
+
 ## Milestone
 
 1. SimpleHttpServer done
