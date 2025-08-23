@@ -28,14 +28,22 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     PrintWriter writer;
 
     String contentType;
+    String characterEncoding;
     long contentLength = 0;
+    Locale locale = null;
     List<Cookie> cookies = null;
     boolean committed = false;
 
     public HttpServletResponseImpl(HttpExchangeResponse exchangeResponse) {
         this.exchangeResponse = exchangeResponse;
         this.headers = new HttpHeaders(exchangeResponse.getResponseHeaders());
+        this.characterEncoding = "UTF-8";
         this.setContentType("text/html");
+    }
+
+    @Override
+    public String getCharacterString() {
+        return this.characterEncoding;
     }
 
     @Override
@@ -72,6 +80,11 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
+    public void setCharacterEncoding(String charset) {
+        this.characterEncoding = charset;
+    }
+
+    @Override
     public void setContentLength(int len) {
         this.contentLength = len;
     }
@@ -84,7 +97,11 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public void setContentType(String type) {
         this.contentType = type;
-        setHeader("Content-Type", type);
+        if (type.startsWith("text/")) {
+            setHeader("Content-Type", contentType + "; charset=" + this.characterEncoding);
+        } else {
+            setHeader("Content-Type", contentType);
+        }
     }
 
     @Override
@@ -133,12 +150,33 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
+    public void setLocale(Locale locale) {
+        checkNotCommitted();
+        this.locale = locale;
+    }
+
+    @Override
+    public Locale getLocale() {
+        return this.locale == null ? Locale.getDefault() : this.locale;
+    }
+
+    @Override
     public void addCookie(Cookie cookie) {
         checkNotCommitted();
         if (this.cookies == null) {
             this.cookies = new ArrayList<>();
         }
         this.cookies.add(cookie);
+    }
+
+    @Override
+    public String encodeURL(String url) {
+        return url;
+    }
+
+    @Override
+    public String encodeRedirectURL(String url) {
+        return url;
     }
 
     @Override
@@ -262,36 +300,6 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     public String getCharacterEncoding() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getCharacterEncoding'");
-    }
-
-    @Override
-    public void setCharacterEncoding(String charset) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setCharacterEncoding'");
-    }
-
-    @Override
-    public void setLocale(Locale loc) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setLocale'");
-    }
-
-    @Override
-    public Locale getLocale() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getLocale'");
-    }
-
-    @Override
-    public String encodeURL(String url) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'encodeURL'");
-    }
-
-    @Override
-    public String encodeRedirectURL(String url) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'encodeRedirectURL'");
     }
 
 }
