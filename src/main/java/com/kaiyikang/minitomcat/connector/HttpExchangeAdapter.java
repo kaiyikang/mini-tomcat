@@ -3,6 +3,7 @@ package com.kaiyikang.minitomcat.connector;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.URI;
 
 import com.sun.net.httpserver.Headers;
@@ -55,5 +56,15 @@ public class HttpExchangeAdapter implements HttpExchangeRequest, HttpExchangeRes
             }
         }
         return this.requestBody;
+    }
+
+    @Override
+    public InetSocketAddress getRemoteAddress() {
+        return this.exchange.getRemoteAddress();
+    }
+
+    @Override
+    public InetSocketAddress getLocalAddress() {
+        return this.exchange.getLocalAddress();
     }
 }

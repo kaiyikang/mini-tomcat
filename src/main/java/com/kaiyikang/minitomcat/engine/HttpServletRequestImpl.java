@@ -51,7 +51,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     String characterEncoding;
     int contentLength = 0;
 
-    String reqeustId = null;
+    String requestId = null;
     Attributes attributes = new Attributes();
 
     Boolean inputCalled = null;
@@ -146,7 +146,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public String getSchema() {
+    public String getScheme() {
         return "http";
     }
 
@@ -156,7 +156,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public String getServerPort() {
+    public int getServerPort() {
         InetSocketAddress address = this.exchangeRequest.getLocalAddress();
         return address.getPort();
     }
@@ -173,62 +173,55 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isSecure() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isSecure'");
+        return false;
     }
 
     @Override
     public RequestDispatcher getRequestDispatcher(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRequestDispatcher'");
+        return null;
     }
 
     @Override
     public ServletContext getServletContext() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServletContext'");
+        return this.servletContext;
     }
 
     @Override
     public AsyncContext startAsync() throws IllegalStateException {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'startAsync'");
     }
 
     @Override
     public AsyncContext startAsync(ServletRequest arg0, ServletResponse arg1) throws IllegalStateException {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'startAsync'");
     }
 
     @Override
     public boolean isAsyncStarted() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isAsyncStarted'");
+        return false;
     }
 
     @Override
     public boolean isAsyncSupported() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isAsyncSupported'");
+        return false;
     }
 
     @Override
     public AsyncContext getAsyncContext() {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getAsyncContext'");
     }
 
     @Override
     public DispatcherType getDispatcherType() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getDispatcherType'");
+        return DispatcherType.REQUEST;
     }
 
     @Override
     public String getRequestId() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRequestId'");
+        if (this.requestId == null) {
+            this.requestId = UUID.randomUUID().toString();
+        }
+        return this.requestId;
     }
 
     @Override
@@ -238,14 +231,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public ServletConnection getServletConnection() {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getServletConnection'");
     }
 
     @Override
     public String getAuthType() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAuthType'");
+        return null;
     }
 
     @Override
@@ -254,7 +245,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         return HttpUtils.parseCookies(cookieValue);
     }
 
-    // -------------------------------------------------------------------------------------------------
     @Override
     public String getMethod() {
         return exchangeRequest.getRequestMethod();
@@ -262,19 +252,22 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPathInfo'");
+        return null;
     }
 
     @Override
     public String getPathTranslated() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPathTranslated'");
+        return this.servletContext.getRealPath(getRequestURI());
     }
 
     @Override
     public String getContextPath() {
         return "";
+    }
+
+    @Override
+    public String getQueryString() {
+        return this.exchangeRequest.getRequestURI().getRawQuery();
     }
 
     @Override
@@ -303,6 +296,19 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String getRequestURI() {
         return exchangeRequest.getRequestURI().getPath();
+    }
+
+    @Override
+    public StringBuffer getRequestURL() {
+        StringBuffer sb = new StringBuffer(128);
+        sb.append(getScheme()).append("://").append(getServerName()).append(":").append(getServerPort())
+                .append(getRequestURI());
+        return sb;
+    }
+
+    @Override
+    public String getServletPath() {
+        return getRequestURI();
     }
 
     @Override
@@ -362,6 +368,41 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
+    public boolean authenticate(HttpServletResponse reqResponse) throws IOException, ServletException {
+        return false;
+    }
+
+    @Override
+    public void login(String username, String password) throws ServletException {
+        // not support auth:
+    }
+
+    @Override
+    public void logout() throws ServletException {
+        // not support auth:
+    }
+
+    @Override
+    public Collection<Part> getParts() throws IOException, ServletException {
+        // not suport multipart:
+        return List.of();
+    }
+
+    @Override
+    public Part getPart(String name) throws IOException, ServletException {
+        // not suport multipart:
+        return null;
+    }
+
+    @Override
+    public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) throws IOException, ServletException {
+        // not suport websocket:
+        return null;
+    }
+
+    // Header
+
+    @Override
     public long getDateHeader(String name) {
         return this.headers.getDateHeader(name);
     }
@@ -390,128 +431,74 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         return this.headers.getIntHeader(name);
     }
 
-    // ========= Not implement yet =========
+    // Attribute
 
     @Override
-    public Object getAttribute(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAttribute'");
+    public Object getAttribute(String name) {
+        return this.attributes.getAttribute(name);
     }
 
     @Override
     public Enumeration<String> getAttributeNames() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAttributeNames'");
+        return this.attributes.getAttributeNames();
     }
 
     @Override
-    public String getLocalAddr() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getLocalAddr'");
+    public void setAttribute(String name, Object value) {
+        if (value == null) {
+            removeAttribute(name);
+        } else {
+            Object oldValue = this.attributes.setAttribute(name, value);
+            if (oldValue == null) {
+                this.servletContext.invokeServletRequestAttributeAdded(this, name, value);
+            } else {
+                this.servletContext.invokeServletRequestAttributeReplaced(this, name, value);
+            }
+        }
     }
 
     @Override
-    public String getLocalName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getLocalName'");
+    public void removeAttribute(String name) {
+        Object oldValue = this.attributes.removeAttribute(name);
+        this.servletContext.invokeServletRequestAttributeRemoved(this, name, oldValue);
     }
 
-    @Override
-    public int getLocalPort() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getLocalPort'");
-    }
+    // Address and Port
 
     @Override
     public String getRemoteAddr() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRemoteAddr'");
+        InetSocketAddress address = this.exchangeRequest.getRemoteAddress();
+        return address.getHostName();
     }
 
     @Override
     public String getRemoteHost() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRemoteHost'");
+        return getRemoteAddr();
     }
 
     @Override
     public int getRemotePort() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRemotePort'");
+
+        InetSocketAddress address = this.exchangeRequest.getRemoteAddress();
+        return address.getPort();
     }
 
     @Override
-    public String getScheme() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getScheme'");
+    public String getLocalAddr() {
+        InetSocketAddress address = this.exchangeRequest.getLocalAddress();
+        return address.getHostString();
     }
 
     @Override
-    public void removeAttribute(String arg0) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'removeAttribute'");
+    public String getLocalName() {
+        // avoid DNS lookup:
+        return getLocalAddr();
     }
 
     @Override
-    public void setAttribute(String arg0, Object arg1) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setAttribute'");
-    }
-
-    @Override
-    public boolean authenticate(HttpServletResponse arg0) throws IOException, ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'authenticate'");
-    }
-
-    @Override
-    public Part getPart(String arg0) throws IOException, ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPart'");
-    }
-
-    @Override
-    public Collection<Part> getParts() throws IOException, ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getParts'");
-    }
-
-    @Override
-    public String getQueryString() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getQueryString'");
-    }
-
-    @Override
-    public StringBuffer getRequestURL() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRequestURL'");
-    }
-
-    @Override
-    public String getServletPath() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServletPath'");
-    }
-
-    @Override
-
-    @Override
-    public void login(String arg0, String arg1) throws ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'login'");
-    }
-
-    @Override
-    public void logout() throws ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'logout'");
-    }
-
-    @Override
-    public <T extends HttpUpgradeHandler> T upgrade(Class<T> arg0) throws IOException, ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'upgrade'");
+    public int getLocalPort() {
+        InetSocketAddress address = this.exchangeRequest.getLocalAddress();
+        return address.getPort();
     }
 
 }
