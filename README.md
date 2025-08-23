@@ -259,19 +259,21 @@ Finally, the specific business logic can be added within the servlets themselves
 
 ## Listener
 
-Listener 用于监听 Web 应用中产生的事件。比如当服务器初始化 ServletContext 时，会触发事件，而实现了该接接口的 listener 可以处理该事件，具体如何处理，可以自己定制，例如数据编码解码，或加载配置文件等。
+Listeners are used to monitor events that occur within a web application. For instance, when the server initializes the `ServletContext`, an event is triggered. A listener that implements the corresponding interface can then handle this event. The handling logic is customizable and can be used for tasks like data encoding/decoding or loading configuration files.
 
-该机制基于[观察者模式](https://en.wikipedia.org/wiki/Observer_pattern)。当事件发生的时候，已经注册过的 listener 会接收到事件，并执行操作。
+This mechanism is based on the [Observer pattern](https://en.wikipedia.org/wiki/Observer_pattern). When an event occurs, all registered listeners are notified and execute their corresponding operations.
 
-Servlet 规范定义了不同的 Listener 接口，它们被用来监听不同类型和运行时的事件。
+The Servlet specification defines various Listener interfaces, each designed to monitor different types of events at different points in the application lifecycle.
 
-首先，实现一个`ServletContextAttributeListener`接口的 Listener，然后在`ServletContextImpl`中，使用`addListener()`方法注册它。在方法中，会使用大量的 if-else 语句，根据所实现的不同接口存储在不同类别的 Listener List 中。
+The implementation process is as follows:
 
-然后我们在`ServletContextImpl`实现触发函数。它以 event 作为输入，调用 Listener List 中的 list，从而实现触发或说调用逻辑。
+First, a Listener that implements an interface like `ServletContextAttributeListener` is created. It is then registered in `ServletContextImpl` via the `addListener()` method. Inside this method, a series of `if-else` statements determine which interface the listener implements and store it in the appropriate categorized list of listeners.
 
-最后，我们需要在需要触发的逻辑中，比如 `setAttribute()` 或 `removeAttribute()` 中，插入刚才实现的触发函数。
+Next, a trigger function is implemented in `ServletContextImpl`. This function takes an event object as input, iterates over the relevant list of listeners, and invokes each one, thereby executing the trigger logic.
 
-总结来说，服务器中具体的逻辑会触发通知函数，该通知函数会继续触发提前登记好的 listener，从而实现广播。
+Finally, this trigger function is called from the methods that are meant to fire the event, such as `setAttribute()` or `removeAttribute()`.
+
+In summary, specific server-side logic triggers a notification function. This function, in turn, invokes the pre-registered listeners, effectively broadcasting the event to all interested parties.
 
 ## Milestone
 
