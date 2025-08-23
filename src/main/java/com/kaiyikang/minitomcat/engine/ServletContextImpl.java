@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.management.RuntimeErrorException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +38,6 @@ import jakarta.servlet.ServletContextAttributeListener;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRegistration;
-import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletRequestAttributeEvent;
 import jakarta.servlet.ServletRequestAttributeListener;
 import jakarta.servlet.ServletRequestEvent;
@@ -51,7 +48,6 @@ import jakarta.servlet.SessionCookieConfig;
 import jakarta.servlet.SessionTrackingMode;
 import jakarta.servlet.descriptor.JspConfigDescriptor;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpSessionAttributeListener;
 import jakarta.servlet.http.HttpSessionBindingEvent;
@@ -175,6 +171,7 @@ public class ServletContextImpl implements ServletContext {
         logger.atDebug().log("process {} by filter {}, servlet {}", uri, Arrays.toString(filters), servlet);
         FilterChain chain = new FilterChainImpl(filters, servlet);
         try {
+            this.invokeServletRequestInitialized(request);
             chain.doFilter(request, response);
         } catch (ServletException e) {
             logger.error(e.getMessage(), e);
@@ -182,6 +179,8 @@ public class ServletContextImpl implements ServletContext {
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
             throw e;
+        } finally {
+            this.invokeServletRequestDestroyed(request);
         }
     }
 

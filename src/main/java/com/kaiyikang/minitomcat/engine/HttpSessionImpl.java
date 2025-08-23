@@ -85,7 +85,12 @@ public class HttpSessionImpl implements HttpSession {
         if (value == null) {
             removeAttribute(name);
         } else {
-            this.attributes.setAttribute(name, value);
+            Object oldValue = this.attributes.setAttribute(name, value);
+            if (oldValue == null) {
+                this.servletContext.invokeHttpSessionAttributeAdded(this, name, value);
+            } else {
+                this.servletContext.invokeHttpSessionAttributeReplaced(this, name, value);
+            }
         }
     }
 

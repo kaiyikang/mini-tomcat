@@ -42,7 +42,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public String getCharacterString() {
+    public String getCharacterEncoding() {
         return this.characterEncoding;
     }
 
@@ -295,11 +295,5 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     // ========= Not implement yet =========
-
-    @Override
-    public String getCharacterEncoding() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getCharacterEncoding'");
-    }
 
 }

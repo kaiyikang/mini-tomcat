@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
-import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.annotation.WebListener;
 
 @WebListener
