@@ -284,7 +284,9 @@ public class Start {
                 if (type == String.class || type.isPrimitive() || Number.class.isAssignableFrom(type)) {
                     field.set(source, overrideFiledValue);
                 } else if (Map.class.isAssignableFrom(type)) {
+                    @SuppressWarnings("unchecked")
                     Map<String, String> sourceMap = (Map<String, String>) field.get(source);
+                    @SuppressWarnings("unchecked")
                     Map<String, String> overrideMap = (Map<String, String>) overrideFiledValue;
                     sourceMap.putAll(overrideMap);
                 } else {
