@@ -1,0 +1,2 @@
+Hello from classpath!
+This is a test resource.
