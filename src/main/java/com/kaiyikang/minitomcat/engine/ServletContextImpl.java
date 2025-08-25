@@ -6,6 +6,8 @@ import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -22,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import com.kaiyikang.minitomcat.engine.mapping.ServletMapping;
 import com.kaiyikang.minitomcat.engine.support.Attributes;
+import com.kaiyikang.minitomcat.Config;
 import com.kaiyikang.minitomcat.engine.mapping.FilterMapping;
 
 import com.kaiyikang.minitomcat.utils.AnnoUtils;
@@ -58,7 +61,18 @@ public class ServletContextImpl implements ServletContext {
 
     final Logger logger = LoggerFactory.getLogger(getClass());
 
-    final SessionManager sessionManager = new SessionManager(this, 10);
+    // Load Class
+    final ClassLoader classLoader;
+    final Config config;
+    final Path webRoot;
+
+    // Session
+    final SessionManager sessionManager; // = new SessionManager(this, 10);
+    final SessionCookieConfig sessionCookieConfig;
+
+    private boolean initialized = false;
+
+    // Context attributes
     private Attributes attributes = new Attributes(true);
 
     private Map<String, ServletRegistrationImpl> servletRegistrations = new HashMap<>();
@@ -70,6 +84,9 @@ public class ServletContextImpl implements ServletContext {
     final List<ServletMapping> servletMappings = new ArrayList<>();
     final List<FilterMapping> filterMappings = new ArrayList<>();
 
+    Servlet defaultServlet; // Q
+
+    // Listener
     private List<ServletContextListener> servletContextListeners = null;
     private List<ServletContextAttributeListener> servletContextAttributeListeners = null;
     private List<ServletRequestListener> servletRequestListeners = null;
@@ -77,65 +94,13 @@ public class ServletContextImpl implements ServletContext {
     private List<HttpSessionListener> httpSessionListeners = null;
     private List<HttpSessionAttributeListener> httpSessionAttributeListeners = null;
 
-    public void initFilters(List<Class<?>> filterClasses) {
-        // Load Filter Classes
-        for (Class<?> c : filterClasses) {
-            WebFilter wf = c.getAnnotation(WebFilter.class);
-            if (wf != null) {
-                logger.info("auto register @WebFilter: {}", c.getName());
-                @SuppressWarnings("unchecked")
-                Class<? extends Filter> clazz = (Class<? extends Filter>) c;
-                // This step will update this.filterRegistrations
-                FilterRegistration.Dynamic registration = this.addFilter(AnnoUtils.getFilterName(clazz), clazz);
-                registration.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true,
-                        AnnoUtils.getFilterUrlPatterns(clazz));
-                registration.setInitParameters(AnnoUtils.getFilterInitParams(clazz));
-            }
-        }
-        // Init filters which are wrapped in registration
-        for (String name : this.filterRegistrations.keySet()) {
-            var registration = this.filterRegistrations.get(name);
-            try {
-                registration.filter.init(registration.getFilterConfig());
-                this.nameToFilters.put(name, registration.filter);
-                for (String urlPattern : registration.getUrlPatternMappings()) {
-                    this.filterMappings.add(new FilterMapping(urlPattern, registration.filter));
-                }
-                registration.initialized = true;
-            } catch (ServletException e) {
-                logger.error("init filter failed: " + name + " / " + registration.filter.getClass().getName(), e);
-            }
-        }
-    }
-
-    public void initServlets(List<Class<?>> servletClasses) {
-        // Load the servlet classes
-        for (Class<?> servletClass : servletClasses) {
-            WebServlet ws = servletClass.getAnnotation(WebServlet.class);
-            if (ws != null) {
-                logger.info("auto register @WebServlet: {}", servletClass.getName());
-                @SuppressWarnings("unchecked")
-                Class<? extends Servlet> clazz = (Class<? extends Servlet>) servletClass;
-                ServletRegistration.Dynamic registration = this.addServlet(AnnoUtils.getServletName(clazz), clazz);
-                registration.addMapping(AnnoUtils.getServletUrlPatterns(clazz));
-                registration.setInitParameters(AnnoUtils.getServletInitParams(clazz));
-            }
-        }
-
-        // Init all servlets
-        for (String name : this.servletRegistrations.keySet()) {
-            var registration = this.servletRegistrations.get(name);
-            try {
-                registration.servlet.init(registration.getServletConfig());
-                this.nameToServlets.put(name, registration.servlet);
-                for (String urlPattern : registration.getMappings()) {
-                    this.servletMappings.add(new ServletMapping(urlPattern, registration.servlet));
-                }
-                registration.initialized = true;
-            } catch (ServletException e) {
-                logger.error("init servlet failed: " + name + " / " + registration.servlet.getClass().getName(), e);
-            }
-        }
+    public ServletContextImpl(ClassLoader classLoader, Config config, String webRoot) {
+        this.classLoader = classLoader; // Q
+        this.config = config;
+        this.sessionCookieConfig = new SessionCookieConfig(config); // Q
+        this.webRoot = Paths.get(webRoot).normalize().toAbsolutePath();
+        this.sessionManager = new SessionManager(this, config.server().webApp().sessionTimeout());
+        logger.info("set web root: {}", this.webRoot);
     }
 
     public void process(HttpServletRequestImpl request, HttpServletResponseImpl response)
@@ -143,13 +108,16 @@ public class ServletContextImpl implements ServletContext {
         String uri = request.getRequestURI();
 
         // Find the matched servlet
-        Servlet servlet = null;
-        for (ServletMapping mapping : this.servletMappings) {
-            if (mapping.matches(uri)) {
-                servlet = mapping.servlet;
-                break;
+        Servlet servlet = defaultServlet;
+        if (!"/".equals(uri)) {
+            for (ServletMapping mapping : this.servletMappings) {
+                if (mapping.matches(uri)) {
+                    servlet = mapping.servlet;
+                    break;
+                }
             }
         }
+
         if (servlet == null) {
             PrintWriter pw = response.getWriter();
             pw.write("<h1>404 Not Found</h1> <p>No mapping for URL: " + uri + "</p>");
@@ -170,6 +138,7 @@ public class ServletContextImpl implements ServletContext {
         Filter[] filters = enabledFilters.toArray(Filter[]::new);
         logger.atDebug().log("process {} by filter {}, servlet {}", uri, Arrays.toString(filters), servlet);
         FilterChain chain = new FilterChainImpl(filters, servlet);
+
         try {
             this.invokeServletRequestInitialized(request);
             chain.doFilter(request, response);
@@ -181,66 +150,6 @@ public class ServletContextImpl implements ServletContext {
             throw e;
         } finally {
             this.invokeServletRequestDestroyed(request);
-        }
-    }
-
-    @Override
-    public void addListener(String className) {
-        EventListener listener = null;
-        try {
-            Class<EventListener> clazz = createInstance(className);
-            listener = createInstance(clazz);
-        } catch (ServletException e) {
-            throw new RuntimeException(e);
-        }
-        addListener(listener);
-    }
-
-    @Override
-    public void addListener(Class<? extends EventListener> listenerClass) {
-        EventListener listener = null;
-        try {
-            listener = createInstance(listenerClass);
-        } catch (ServletException e) {
-            throw new RuntimeException(e);
-        }
-        addListener(listener);
-    }
-
-    @Override
-    public <T extends EventListener> void addListener(T t) {
-        if (t instanceof ServletContextListener listener) {
-            if (this.servletContextListeners == null) {
-                this.servletContextListeners = new ArrayList<>();
-            }
-            this.servletContextListeners.add(listener);
-        } else if (t instanceof ServletContextAttributeListener listener) {
-            if (this.servletContextAttributeListeners == null) {
-                this.servletContextAttributeListeners = new ArrayList<>();
-            }
-            this.servletContextAttributeListeners.add(listener);
-        } else if (t instanceof ServletRequestListener listener) {
-            if (this.servletRequestListeners == null) {
-                this.servletRequestListeners = new ArrayList<>();
-            }
-            this.servletRequestListeners.add(listener);
-        } else if (t instanceof ServletRequestAttributeListener listener) {
-            if (this.servletRequestAttributeListeners == null) {
-                this.servletRequestAttributeListeners = new ArrayList<>();
-            }
-            this.servletRequestAttributeListeners.add(listener);
-        } else if (t instanceof HttpSessionAttributeListener listener) {
-            if (this.httpSessionAttributeListeners == null) {
-                this.httpSessionAttributeListeners = new ArrayList<>();
-            }
-            this.httpSessionAttributeListeners.add(listener);
-        } else if (t instanceof HttpSessionListener listener) {
-            if (this.httpSessionListeners == null) {
-                this.httpSessionListeners = new ArrayList<>();
-            }
-            this.httpSessionListeners.add(listener);
-        } else {
-            throw new IllegalArgumentException("Unsupported listener: " + t.getClass().getName());
         }
     }
 
@@ -378,6 +287,92 @@ public class ServletContextImpl implements ServletContext {
     // End of Invoke listeners
 
     @Override
+    public String getContextPath() {
+        // Only support root context path
+        return "";
+    }
+
+    @Override
+    public ServletContext getContext(String uriPath) {
+        if ("".equals(uriPath)) {
+            return this;
+        }
+        return null;
+    }
+
+    @Override
+    public String getMimeType(String file) {
+        String defaultMime = "application/octet-stream";
+        Map<String, String> mimes = Map.of(".html", "text/html", ".txt", "text/plain", ".png", "image/png", ".jpg",
+                "image/jpeg");
+        int n = file.lastIndexOf(".");
+        if (n == -1) {
+            return defaultMime;
+        }
+        String ext = file.substring(n);
+        return mimes.getOrDefault(ext, defaultMime);
+    }
+
+    @Override
+    public Set<String> getResourcePaths(String path) {
+    }
+
+    @Override
+    public URL getResource(String path) throws MalformedURLException {
+
+    }
+
+    @Override
+    public InputStream getResourceAsStream(String path) {
+
+    }
+
+    @Override
+    public String getRealPath(String path) {
+
+    }
+
+    @Override
+    public RequestDispatcher getRequestDispatcher(String path) {
+        return null;
+    }
+
+    @Override
+    public RequestDispatcher getNamedDispatcher(String name) {
+        return null;
+    }
+
+    @Override
+    public void log(String msg) {
+
+    }
+
+    @Override
+    public void log(String message, Throwable throwable) {
+
+    }
+
+    @Override
+    public String getServerInfo() {
+
+    }
+
+    @Override
+    public String getInitParameter(String name) {
+        return null;
+    }
+
+    @Override
+    public Enumeration<String> getInitParameterNames() {
+        return Collections.emptyEnumeration();
+    }
+
+    @Override
+    public boolean setInitParameter(String name, String value) {
+        throw new UnsupportedOperationException("setInitParameter");
+    }
+
+    @Override
     public Object getAttribute(String name) {
         return this.attributes.getAttribute(name);
     }
@@ -408,45 +403,9 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public String getContextPath() {
-        // Only support root context path
-        return "";
-    }
-
-    @Override
-    public ServletContext getContext(String uripath) {
-        if ("".equals(uripath)) {
-            return this;
-        }
-        return null;
-    }
-
-    @Override
-    public String getMimeType(String file) {
-        String defaultMime = "application/octet-stream";
-        Map<String, String> mimes = Map.of(".html", "text/html", ".txt", "text/plain", ".png", "image/png", ".jpg",
-                "image/jpeg");
-        int n = file.lastIndexOf(".");
-        if (n == -1) {
-            return defaultMime;
-        }
-        String ext = file.substring(n);
-        return mimes.getOrDefault(ext, defaultMime);
-    }
-
-    @Override
-    public String getInitParameter(String name) {
-        return null;
-    }
-
-    @Override
-    public Enumeration<String> getInitParameterNames() {
-        return Collections.emptyEnumeration();
-    }
-
-    @Override
-    public boolean setInitParameter(String name, String value) {
-        throw new UnsupportedOperationException("setInitParameter");
+    public String getServletContextName() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getServletContextName'");
     }
 
     @Override
@@ -495,8 +454,8 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public <T extends Servlet> T createServlet(Class<T> clazz) throws ServletException {
-        return createInstance(clazz);
+    public ServletRegistration.Dynamic addJspFile(String servletName, String jspFile) {
+
     }
 
     @Override
@@ -569,119 +528,6 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public int getMajorVersion() {
-        return 6;
-    }
-
-    @Override
-    public int getMinorVersion() {
-        return 0;
-    }
-
-    @Override
-    public int getEffectiveMajorVersion() {
-        return 6;
-    }
-
-    @Override
-    public int getEffectiveMinorVersion() {
-        return 0;
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> T createInstance(String className) throws ServletException {
-        Class<T> clazz;
-        try {
-            clazz = (Class<T>) Class.forName(className);
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("Class not found.", e);
-        }
-        return createInstance(clazz);
-    }
-
-    private <T> T createInstance(Class<T> clazz) throws ServletException {
-        try {
-            Constructor<T> constructor = clazz.getConstructor();
-            return constructor.newInstance();
-        } catch (ReflectiveOperationException e) {
-            throw new ServletException("Cannot instantiate class" + clazz.getName(), e);
-        }
-    }
-
-    @Override
-    public int getSessionTimeout() {
-        return this.sessionManager.inactiveInterval;
-    }
-
-    // =============== Not implemented yet ===============
-
-    @Override
-    public Set<String> getResourcePaths(String path) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getResourcePaths'");
-    }
-
-    @Override
-    public URL getResource(String path) throws MalformedURLException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getResource'");
-    }
-
-    @Override
-    public InputStream getResourceAsStream(String path) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getResourceAsStream'");
-    }
-
-    @Override
-    public RequestDispatcher getRequestDispatcher(String path) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRequestDispatcher'");
-    }
-
-    @Override
-    public RequestDispatcher getNamedDispatcher(String name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getNamedDispatcher'");
-    }
-
-    @Override
-    public void log(String msg) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'log'");
-    }
-
-    @Override
-    public void log(String message, Throwable throwable) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'log'");
-    }
-
-    @Override
-    public String getRealPath(String path) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRealPath'");
-    }
-
-    @Override
-    public String getServerInfo() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServerInfo'");
-    }
-
-    @Override
-    public String getServletContextName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServletContextName'");
-    }
-
-    @Override
-    public ServletRegistration.Dynamic addJspFile(String servletName, String jspFile) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addJspFile'");
-    }
-
-    @Override
     public SessionCookieConfig getSessionCookieConfig() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getSessionCookieConfig'");
@@ -703,6 +549,66 @@ public class ServletContextImpl implements ServletContext {
     public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getEffectiveSessionTrackingModes'");
+    }
+
+    @Override
+    public void addListener(String className) {
+        EventListener listener = null;
+        try {
+            Class<EventListener> clazz = createInstance(className);
+            listener = createInstance(clazz);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        addListener(listener);
+    }
+
+    @Override
+    public void addListener(Class<? extends EventListener> listenerClass) {
+        EventListener listener = null;
+        try {
+            listener = createInstance(listenerClass);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        addListener(listener);
+    }
+
+    @Override
+    public <T extends EventListener> void addListener(T t) {
+        if (t instanceof ServletContextListener listener) {
+            if (this.servletContextListeners == null) {
+                this.servletContextListeners = new ArrayList<>();
+            }
+            this.servletContextListeners.add(listener);
+        } else if (t instanceof ServletContextAttributeListener listener) {
+            if (this.servletContextAttributeListeners == null) {
+                this.servletContextAttributeListeners = new ArrayList<>();
+            }
+            this.servletContextAttributeListeners.add(listener);
+        } else if (t instanceof ServletRequestListener listener) {
+            if (this.servletRequestListeners == null) {
+                this.servletRequestListeners = new ArrayList<>();
+            }
+            this.servletRequestListeners.add(listener);
+        } else if (t instanceof ServletRequestAttributeListener listener) {
+            if (this.servletRequestAttributeListeners == null) {
+                this.servletRequestAttributeListeners = new ArrayList<>();
+            }
+            this.servletRequestAttributeListeners.add(listener);
+        } else if (t instanceof HttpSessionAttributeListener listener) {
+            if (this.httpSessionAttributeListeners == null) {
+                this.httpSessionAttributeListeners = new ArrayList<>();
+            }
+            this.httpSessionAttributeListeners.add(listener);
+        } else if (t instanceof HttpSessionListener listener) {
+            if (this.httpSessionListeners == null) {
+                this.httpSessionListeners = new ArrayList<>();
+            }
+            this.httpSessionListeners.add(listener);
+        } else {
+            throw new IllegalArgumentException("Unsupported listener: " + t.getClass().getName());
+        }
     }
 
     @Override
@@ -736,6 +642,11 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
+    public int getSessionTimeout() {
+        return this.sessionManager.inactiveInterval;
+    }
+
+    @Override
     public void setSessionTimeout(int sessionTimeout) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'setSessionTimeout'");
@@ -764,5 +675,131 @@ public class ServletContextImpl implements ServletContext {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'setResponseCharacterEncoding'");
     }
+
+    // get API version
+    @Override
+    public int getMajorVersion() {
+        return 6;
+    }
+
+    @Override
+    public int getMinorVersion() {
+        return 0;
+    }
+
+    @Override
+    public int getEffectiveMajorVersion() {
+        return 6;
+    }
+
+    @Override
+    public int getEffectiveMinorVersion() {
+        return 0;
+    }
+
+    // Custom Methods
+
+    public void initialize(List<Class<?>> autoScannedClasses) {
+
+    }
+
+    public void destroy() {
+
+    }
+
+    private void checkNotInitialized(String name) {
+        if (this.initialized) {
+            throw new IllegalStateException("Cannot call " + name + "after initialization.");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T createInstance(String className) throws ServletException {
+        Class<T> clazz;
+        try {
+            clazz = (Class<T>) Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("Class not found.", e);
+        }
+        return createInstance(clazz);
+    }
+
+    private <T> T createInstance(Class<T> clazz) throws ServletException {
+        try {
+            Constructor<T> constructor = clazz.getConstructor();
+            return constructor.newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new ServletException("Cannot instantiate class" + clazz.getName(), e);
+        }
+    }
+
+    // ??
+
+    // public void initFilters(List<Class<?>> filterClasses) {
+    // // Load Filter Classes
+    // for (Class<?> c : filterClasses) {
+    // WebFilter wf = c.getAnnotation(WebFilter.class);
+    // if (wf != null) {
+    // logger.info("auto register @WebFilter: {}", c.getName());
+    // @SuppressWarnings("unchecked")
+    // Class<? extends Filter> clazz = (Class<? extends Filter>) c;
+    // // This step will update this.filterRegistrations
+    // FilterRegistration.Dynamic registration =
+    // this.addFilter(AnnoUtils.getFilterName(clazz), clazz);
+    // registration.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST),
+    // true,
+    // AnnoUtils.getFilterUrlPatterns(clazz));
+    // registration.setInitParameters(AnnoUtils.getFilterInitParams(clazz));
+    // }
+    // }
+    // // Init filters which are wrapped in registration
+    // for (String name : this.filterRegistrations.keySet()) {
+    // var registration = this.filterRegistrations.get(name);
+    // try {
+    // registration.filter.init(registration.getFilterConfig());
+    // this.nameToFilters.put(name, registration.filter);
+    // for (String urlPattern : registration.getUrlPatternMappings()) {
+    // this.filterMappings.add(new FilterMapping(urlPattern, registration.filter));
+    // }
+    // registration.initialized = true;
+    // } catch (ServletException e) {
+    // logger.error("init filter failed: " + name + " / " +
+    // registration.filter.getClass().getName(), e);
+    // }
+    // }
+    // }
+
+    // public void initServlets(List<Class<?>> servletClasses) {
+    // // Load the servlet classes
+    // for (Class<?> servletClass : servletClasses) {
+    // WebServlet ws = servletClass.getAnnotation(WebServlet.class);
+    // if (ws != null) {
+    // logger.info("auto register @WebServlet: {}", servletClass.getName());
+    // @SuppressWarnings("unchecked")
+    // Class<? extends Servlet> clazz = (Class<? extends Servlet>) servletClass;
+    // ServletRegistration.Dynamic registration =
+    // this.addServlet(AnnoUtils.getServletName(clazz), clazz);
+    // registration.addMapping(AnnoUtils.getServletUrlPatterns(clazz));
+    // registration.setInitParameters(AnnoUtils.getServletInitParams(clazz));
+    // }
+    // }
+
+    // // Init all servlets
+    // for (String name : this.servletRegistrations.keySet()) {
+    // var registration = this.servletRegistrations.get(name);
+    // try {
+    // registration.servlet.init(registration.getServletConfig());
+    // this.nameToServlets.put(name, registration.servlet);
+    // for (String urlPattern : registration.getMappings()) {
+    // this.servletMappings.add(new ServletMapping(urlPattern,
+    // registration.servlet));
+    // }
+    // registration.initialized = true;
+    // } catch (ServletException e) {
+    // logger.error("init servlet failed: " + name + " / " +
+    // registration.servlet.getClass().getName(), e);
+    // }
+    // }
+    // }
 
 }
