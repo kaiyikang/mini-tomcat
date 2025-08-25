@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.EventListener;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import com.sun.net.httpserver.HttpServer;
 
@@ -20,6 +21,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import com.kaiyikang.minitomcat.Config;
 import com.kaiyikang.minitomcat.engine.HttpServletRequestImpl;
 import com.kaiyikang.minitomcat.engine.HttpServletResponseImpl;
 import com.kaiyikang.minitomcat.engine.ServletContextImpl;
@@ -44,48 +46,41 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
 
     final Logger logger = LoggerFactory.getLogger(getClass());
 
+    final Config config;
+    final ClassLoader classLoader;
     final ServletContextImpl servletContext;
     final HttpServer httpServer;
     final Duration stopDisplay = Duration.ofSeconds(5);
 
-    public HttpConnector() throws IOException {
-        // Define the classes, filters
-        List<Class<?>> definedClasses = List.of(
-                IndexServlet.class,
-                HelloServlet.class,
-                LoginServlet.class,
-                LogoutServlet.class);
-        List<Class<?>> definedFilters = List.of(
-                LogFilter.class,
-                HelloFilter.class);
+    public HttpConnector(Config config, String webRoot, Executor executor, ClassLoader classloader,
+            List<Class<?>> autoScannedClasses) throws IOException {
 
-        // Initialize the servlets with classes
-        this.servletContext = new ServletContextImpl();
-        this.servletContext.initServlets(definedClasses);
-        this.servletContext.initFilters(definedFilters);
+        String host = config.server().host();
+        int port = config.server().port();
+        logger.info("Starting mini-tomcat http server at {}:{}...", host, port);
 
-        // Define Listener
-        List<Class<? extends EventListener>> definedListeners = List.of(
-                HelloHttpSessionAttributeListener.class,
-                HelloHttpSessionListener.class,
-                HelloServletContextAttributeListener.class,
-                HelloServletContextListener.class,
-                HelloServletRequestAttributeListener.class,
-                HelloServletRequestListener.class);
-        for (var listener : definedListeners) {
-            this.servletContext.addListener(listener);
-        }
+        this.config = config;
+        this.classLoader = classloader;
 
-        // Start Http Server
-        String host = "0.0.0.0";
-        int port = 8080;
-        this.httpServer = HttpServer.create(new InetSocketAddress(host, port), 0, "/", this);
+        // Init servlet context
+
+        Thread.currentThread().setContextClassLoader(this.classLoader);
+        ServletContextImpl ctx = new ServletContextImpl(classloader, config, webRoot);
+        ctx.initialize(autoScannedClasses);
+        this.servletContext = ctx;
+        Thread.currentThread().setContextClassLoader(null);
+
+        // Start http server
+        this.httpServer = HttpServer.create(new InetSocketAddress(host, port), config.server().backlog(),
+                "/", this);
+        this.httpServer.setExecutor(executor);
         this.httpServer.start();
         logger.info("mini tomcat http server started at {}:{} ...", host, port);
     }
 
     @Override
     public void close() {
+        this.servletContext.destroy();
         this.httpServer.stop((int) this.stopDisplay.toSeconds());
     }
 
