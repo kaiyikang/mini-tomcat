@@ -303,6 +303,12 @@ hello-webapp
 └── favicon.ico
 ```
 
+## Temp Question
+
+### How to handle war file?
+
+### How do we get autoScannedClasses?
+
 ## Milestone
 
 1. SimpleHttpServer done

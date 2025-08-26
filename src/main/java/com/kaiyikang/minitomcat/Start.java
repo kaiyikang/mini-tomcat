@@ -76,7 +76,7 @@ public class Start {
             return;
         }
 
-        new Start().start(warFile, customConfigPath);
+        new Start().start(warFile, customConfigPath); // Q
     }
 
     private void start(String warFile, String customConfigPath) throws IOException {
@@ -193,7 +193,6 @@ public class Start {
 
     private Path[] extractWarIfNecessary(Path warPath) throws IOException {
         if (Files.isDirectory(warPath)) {
-            // TODO
             logger.info("war is directory: {},", warPath);
             Path classesPath = warPath.resolve("WEB-INF/classes");
             Path libPath = warPath.resolve("WEB-INF/lib");

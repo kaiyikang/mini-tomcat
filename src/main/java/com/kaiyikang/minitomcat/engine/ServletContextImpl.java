@@ -1,11 +1,16 @@
 package com.kaiyikang.minitomcat.engine;
 
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -18,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +52,7 @@ import jakarta.servlet.ServletRequestAttributeListener;
 import jakarta.servlet.ServletRequestEvent;
 import jakarta.servlet.ServletRequestListener;
 import jakarta.servlet.annotation.WebFilter;
+import jakarta.servlet.annotation.WebListener;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.SessionCookieConfig;
 import jakarta.servlet.SessionTrackingMode;
@@ -302,34 +309,68 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getMimeType(String file) {
-        String defaultMime = "application/octet-stream";
-        Map<String, String> mimes = Map.of(".html", "text/html", ".txt", "text/plain", ".png", "image/png", ".jpg",
-                "image/jpeg");
-        int n = file.lastIndexOf(".");
-        if (n == -1) {
-            return defaultMime;
-        }
-        String ext = file.substring(n);
-        return mimes.getOrDefault(ext, defaultMime);
+        return config.server().getMimeType(file);
     }
 
     @Override
     public Set<String> getResourcePaths(String path) {
+
+        String normalizedPath = (path != null && path.startsWith("/")) ? path.substring(1) : path;
+
+        Path resolvedPath = this.webRoot.resolve(normalizedPath).normalize();
+
+        if (!resolvedPath.startsWith(this.webRoot) || !Files.isDirectory(resolvedPath)) {
+            return null;
+        }
+
+        try {
+            return Files.list(resolvedPath).map(p -> p.getFileName().toString()).collect(Collectors.toSet());
+        } catch (IOException e) {
+            logger.warn("list files failed for path: {}", path);
+        }
+        return null;
     }
 
     @Override
     public URL getResource(String path) throws MalformedURLException {
+        String normalizedPath = (path != null && path.startsWith("/")) ? path.substring(1) : path;
+        Path resolvedPath = this.webRoot.resolve(normalizedPath).normalize();
 
+        if (resolvedPath.startsWith(this.webRoot)) {
+            return URI.create("file://" + resolvedPath.toString()).toURL();
+        }
+
+        throw new MalformedURLException("Path not found: " + path);
     }
 
     @Override
     public InputStream getResourceAsStream(String path) {
+        String normalizedPath = (path != null && path.startsWith("/")) ? path.substring(1) : path;
+
+        Path resolvedPath = this.webRoot.resolve(normalizedPath).normalize();
+
+        if (!resolvedPath.startsWith(this.webRoot) || !Files.isReadable(resolvedPath)) {
+            return null;
+        }
+
+        try {
+            return new BufferedInputStream(new FileInputStream(resolvedPath.toFile()));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
 
     }
 
     @Override
     public String getRealPath(String path) {
-
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+        Path resolvedPath = this.webRoot.resolve(path).normalize();
+        if (resolvedPath.startsWith(this.webRoot)) {
+            return resolvedPath.toString();
+        }
+        return null;
     }
 
     @Override
@@ -344,17 +385,17 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void log(String msg) {
-
+        logger.info(msg);
     }
 
     @Override
     public void log(String message, Throwable throwable) {
-
+        logger.error(message, throwable);
     }
 
     @Override
     public String getServerInfo() {
-
+        return this.config.server().name();
     }
 
     @Override
@@ -404,13 +445,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServletContextName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServletContextName'");
+        return this.config.server().webApp().name();
     }
 
     @Override
     public ServletRegistration.Dynamic addServlet(String servletName, String className) {
-
+        checkNotInitialized("addServlet");
         if (className == null || className.isEmpty()) {
             throw new IllegalArgumentException("class name is null or empty.");
         }
@@ -426,6 +466,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(String servletName, Class<? extends Servlet> servletClass) {
+        checkNotInitialized("addServlet");
+
         if (servletClass == null) {
             throw new IllegalArgumentException("class is null.");
         }
@@ -441,6 +483,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(String servletName, Servlet servlet) {
+        checkNotInitialized("addServlet");
+
         // Final step of addServlet: registration
         if (servletName == null) {
             throw new IllegalArgumentException("name is null.");
@@ -455,7 +499,13 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addJspFile(String servletName, String jspFile) {
+        throw new UnsupportedOperationException("addJspFile");
+    }
 
+    @Override
+    public <T extends Servlet> T createServlet(Class<T> clazz) throws ServletException {
+        checkNotInitialized("createServlet");
+        return createInstance(clazz);
     }
 
     @Override
@@ -470,6 +520,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(String filterName, String className) {
+        checkNotInitialized("addFilter");
+
         if (className == null || className.isEmpty()) {
             throw new IllegalArgumentException("class name is null or empty.");
         }
@@ -485,6 +537,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
+        checkNotInitialized("addFilter");
+
         if (filterName == null) {
             throw new IllegalArgumentException("class is null.");
         }
@@ -499,6 +553,8 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public FilterRegistration.Dynamic addFilter(String filterName,
             Class<? extends Filter> filterClass) {
+        checkNotInitialized("addFilter");
+
         if (filterClass == null) {
             throw new IllegalArgumentException("class is null.");
         }
@@ -514,6 +570,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException {
+        checkNotInitialized("createFilter");
+
         return createInstance(clazz);
     }
 
@@ -529,30 +587,28 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public SessionCookieConfig getSessionCookieConfig() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getSessionCookieConfig'");
+        return this.sessionCookieConfig;
     }
 
     @Override
     public void setSessionTrackingModes(Set<SessionTrackingMode> sessionTrackingModes) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'setSessionTrackingModes'");
     }
 
     @Override
     public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getDefaultSessionTrackingModes'");
+        return Set.of(SessionTrackingMode.COOKIE);
     }
 
     @Override
     public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getEffectiveSessionTrackingModes'");
+        return this.getDefaultSessionTrackingModes();
     }
 
     @Override
     public void addListener(String className) {
+        checkNotInitialized("addListener");
+
         EventListener listener = null;
         try {
             Class<EventListener> clazz = createInstance(className);
@@ -565,6 +621,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void addListener(Class<? extends EventListener> listenerClass) {
+        checkNotInitialized("addListener");
+
         EventListener listener = null;
         try {
             listener = createInstance(listenerClass);
@@ -576,6 +634,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> void addListener(T t) {
+        checkNotInitialized("addListener");
+
         if (t instanceof ServletContextListener listener) {
             if (this.servletContextListeners == null) {
                 this.servletContextListeners = new ArrayList<>();
@@ -613,32 +673,28 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> T createListener(Class<T> clazz) throws ServletException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'createListener'");
+        checkNotInitialized("createListener");
+        return createInstance(clazz);
     }
 
     @Override
     public JspConfigDescriptor getJspConfigDescriptor() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getJspConfigDescriptor'");
+        return null;
     }
 
     @Override
     public ClassLoader getClassLoader() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getClassLoader'");
+        return this.classLoader;
     }
 
     @Override
     public void declareRoles(String... roleNames) {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'declareRoles'");
     }
 
     @Override
     public String getVirtualServerName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getVirtualServerName'");
+        return this.config.server().webApp().virtualServerName();
     }
 
     @Override
@@ -648,32 +704,31 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void setSessionTimeout(int sessionTimeout) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setSessionTimeout'");
+        return this.config.server().webApp().sessionTimeout();
     }
 
     @Override
     public String getRequestCharacterEncoding() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRequestCharacterEncoding'");
+        return this.config.server().requestEncoding();
     }
 
     @Override
     public void setRequestCharacterEncoding(String encoding) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setRequestCharacterEncoding'");
+        checkNotInitialized("setRequestCharacterEncoding");
+        throw new UnsupportedOperationException(
+                "Request character encoding cannot be changed at runtime. It must be set in configuration.");
     }
 
     @Override
     public String getResponseCharacterEncoding() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getResponseCharacterEncoding'");
+        return this.config.server().responseEncoding();
     }
 
     @Override
     public void setResponseCharacterEncoding(String encoding) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setResponseCharacterEncoding'");
+        checkNotInitialized("setResponseCharacterEncoding");
+        throw new UnsupportedOperationException(
+                "Response character encoding cannot be changed at runtime. It must be set in configuration.");
     }
 
     // get API version
@@ -700,6 +755,88 @@ public class ServletContextImpl implements ServletContext {
     // Custom Methods
 
     public void initialize(List<Class<?>> autoScannedClasses) {
+        if (this.initialized) {
+            throw new IllegalStateException("Cannot re-initialize.");
+        }
+
+        // Register WebListener
+        for (Class<?> c : autoScannedClasses) {
+            if (c.isAssignableFrom(WebListener.class)) {
+                logger.info("auto register @WebListener: {}", c.getName());
+                @SuppressWarnings("unchecked")
+                Class<? extends EventListener> clazz = (Class<? extends EventListener>) c;
+                this.addListener(clazz);
+            }
+        }
+
+        this.invokeServletRequestInitialized();
+
+        // Register WebServlet and WebFilter
+        for (Class<?> c : autoScannedClasses) {
+            WebServlet ws = c.getAnnotation(WebServlet.class);
+            WebFilter wf = c.getAnnotation(WebFilter.class);
+
+            if (ws != null) {
+                logger.info("auto register @WebServlet: {}", c.getName());
+                @SuppressWarnings("unchecked")
+                Class<? extends Servlet> clazz = (Class<? extends Servlet>) c;
+                ServletRegistration.Dynamic registration = this.addServlet(AnnoUtils.getServletName(clazz), clazz);
+                registration.addMapping(AnnoUtils.getServletUrlPatterns(clazz));
+                registration.setInitParameters(AnnoUtils.getServletInitParams(clazz));
+            }
+            if (wf != null) {
+                logger.info("auto register @WebFilter: {}", c.getName());
+                @SuppressWarnings("unchecked")
+                Class<? extends Filter> clazz = (Class<? extends Filter>) c;
+                FilterRegistration.Dynamic registration = this.addFilter(AnnoUtils.getFilterName(clazz), clazz);
+                registration.addMappingForUrlPatterns(AnnoUtils.getFilterDispatcherTypes(clazz), true,
+                        AnnoUtils.getFilterUrlPatterns(clazz));
+                registration.setInitParameters(AnnoUtils.getFilterInitParams(clazz));
+            }
+        }
+
+        // Init Servlets
+        Servlet defaultServlet = null;
+        for (String name : this.servletRegistrations.keySet()) {
+            var registration = this.servletRegistrations.get(name);
+            try {
+                registration.servlet.init(registration.getServletConfig());
+                this.nameToServlets.put(name, registration.servlet);
+                for (String urlPattern : registration.getMappings()) {
+                    this.servletMappings.add(new ServletMapping(urlPattern, registration.servlet));
+                    if (urlPattern.equals("/")) {
+                        if (defaultServlet == null) {
+                            defaultServlet = registration.servlet;
+                            logger.info("set default servlet: " + registration.getClassName());
+                        } else {
+                            logger.warn("found duplicate default servlet: " + registration.getClassName());
+                        }
+
+                    }
+                }
+            } catch (ServletException e) {
+                logger.error("init servlet failed: " + name + " / " + registration.servlet.getClass().getName(), e);
+            }
+        }
+
+        if (defaultServlet == null && config.server().webApp().fileListings()) {
+            logger.info("no default servlet. auto register {}...", DefaultServlet.class.getName());
+            defaultServlet = new DefaultServlet();
+            try {
+            } catch (ServletException e) {
+                logger.error("init default failed.", e);
+            }
+        }
+        this.defaultServlet = defaultServlet;
+
+        // Init Filters
+        for (String name : this.filterRegistrations.keySet()) {
+
+        }
+
+        // Sort by servlet mappings
+
+        // Sort by filter name
 
     }
 
@@ -732,74 +869,5 @@ public class ServletContextImpl implements ServletContext {
             throw new ServletException("Cannot instantiate class" + clazz.getName(), e);
         }
     }
-
-    // ??
-
-    // public void initFilters(List<Class<?>> filterClasses) {
-    // // Load Filter Classes
-    // for (Class<?> c : filterClasses) {
-    // WebFilter wf = c.getAnnotation(WebFilter.class);
-    // if (wf != null) {
-    // logger.info("auto register @WebFilter: {}", c.getName());
-    // @SuppressWarnings("unchecked")
-    // Class<? extends Filter> clazz = (Class<? extends Filter>) c;
-    // // This step will update this.filterRegistrations
-    // FilterRegistration.Dynamic registration =
-    // this.addFilter(AnnoUtils.getFilterName(clazz), clazz);
-    // registration.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST),
-    // true,
-    // AnnoUtils.getFilterUrlPatterns(clazz));
-    // registration.setInitParameters(AnnoUtils.getFilterInitParams(clazz));
-    // }
-    // }
-    // // Init filters which are wrapped in registration
-    // for (String name : this.filterRegistrations.keySet()) {
-    // var registration = this.filterRegistrations.get(name);
-    // try {
-    // registration.filter.init(registration.getFilterConfig());
-    // this.nameToFilters.put(name, registration.filter);
-    // for (String urlPattern : registration.getUrlPatternMappings()) {
-    // this.filterMappings.add(new FilterMapping(urlPattern, registration.filter));
-    // }
-    // registration.initialized = true;
-    // } catch (ServletException e) {
-    // logger.error("init filter failed: " + name + " / " +
-    // registration.filter.getClass().getName(), e);
-    // }
-    // }
-    // }
-
-    // public void initServlets(List<Class<?>> servletClasses) {
-    // // Load the servlet classes
-    // for (Class<?> servletClass : servletClasses) {
-    // WebServlet ws = servletClass.getAnnotation(WebServlet.class);
-    // if (ws != null) {
-    // logger.info("auto register @WebServlet: {}", servletClass.getName());
-    // @SuppressWarnings("unchecked")
-    // Class<? extends Servlet> clazz = (Class<? extends Servlet>) servletClass;
-    // ServletRegistration.Dynamic registration =
-    // this.addServlet(AnnoUtils.getServletName(clazz), clazz);
-    // registration.addMapping(AnnoUtils.getServletUrlPatterns(clazz));
-    // registration.setInitParameters(AnnoUtils.getServletInitParams(clazz));
-    // }
-    // }
-
-    // // Init all servlets
-    // for (String name : this.servletRegistrations.keySet()) {
-    // var registration = this.servletRegistrations.get(name);
-    // try {
-    // registration.servlet.init(registration.getServletConfig());
-    // this.nameToServlets.put(name, registration.servlet);
-    // for (String urlPattern : registration.getMappings()) {
-    // this.servletMappings.add(new ServletMapping(urlPattern,
-    // registration.servlet));
-    // }
-    // registration.initialized = true;
-    // } catch (ServletException e) {
-    // logger.error("init servlet failed: " + name + " / " +
-    // registration.servlet.getClass().getName(), e);
-    // }
-    // }
-    // }
 
 }
