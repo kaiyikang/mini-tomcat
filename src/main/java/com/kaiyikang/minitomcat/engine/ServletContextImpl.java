@@ -41,9 +41,11 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterRegistration;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextAttributeEvent;
 import jakarta.servlet.ServletContextAttributeListener;
+import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRegistration;
@@ -161,6 +163,26 @@ public class ServletContextImpl implements ServletContext {
     }
 
     // Begin of Invoke listeners
+    void invokeServletContextInitialized() {
+        logger.debug("invoke ServletContextInitialized: {}", this);
+        if (this.servletContextListeners != null) {
+            var event = new ServletContextEvent(this);
+            for (var listener : this.servletContextListeners) {
+                listener.contextInitialized(event);
+            }
+        }
+    }
+
+    void invokeServletContextDestroyed() {
+        logger.debug("invoke ServletContextDestroyed: {}", this);
+        if (this.servletContextListeners != null) {
+            var event = new ServletContextEvent(this);
+            for (var listener : this.servletContextListeners) {
+                listener.contextDestroyed(event);
+            }
+        }
+    }
+
     void invokeServletContextAttributeAdded(String name, Object object) {
         logger.info("invoke ServletContextAttributeAdded: {} = {}", name, object);
         if (this.servletContextAttributeListeners != null) {
@@ -769,7 +791,7 @@ public class ServletContextImpl implements ServletContext {
             }
         }
 
-        this.invokeServletRequestInitialized();
+        this.invokeServletContextInitialized();
 
         // Register WebServlet and WebFilter
         for (Class<?> c : autoScannedClasses) {
@@ -823,6 +845,30 @@ public class ServletContextImpl implements ServletContext {
             logger.info("no default servlet. auto register {}...", DefaultServlet.class.getName());
             defaultServlet = new DefaultServlet();
             try {
+                defaultServlet.init(new ServletConfig() {
+
+                    @Override
+                    public String getServletName() {
+                        return "DefaultServlet";
+                    }
+
+                    @Override
+                    public ServletContext getServletContext() {
+                        return ServletContextImpl.this;
+                    }
+
+                    @Override
+                    public String getInitParameter(String name) {
+                        return null;
+                    }
+
+                    @Override
+                    public Enumeration<String> getInitParameterNames() {
+                        return Collections.emptyEnumeration();
+                    }
+
+                });
+                this.servletMappings.add(new ServletMapping("/", defaultServlet));
             } catch (ServletException e) {
                 logger.error("init default failed.", e);
             }
@@ -831,16 +877,52 @@ public class ServletContextImpl implements ServletContext {
 
         // Init Filters
         for (String name : this.filterRegistrations.keySet()) {
-
+            var registration = this.filterRegistrations.get(name);
+            try {
+                registration.filter.init(registration.getFilterConfig());
+                this.nameToFilters.put(name, registration.filter);
+                for (String urlPattern : registration.getUrlPatternMappings()) {
+                    this.filterMappings.add(new FilterMapping(name, urlPattern, registration.filter)); // Q
+                }
+                registration.initialized = true;
+            } catch (ServletException e) {
+                logger.error("init filter failed: " + name + "/" + registration.filter.getClass().getName(), e);
+            }
         }
 
         // Sort by servlet mappings
-
+        Collections.sort(this.servletMappings);
         // Sort by filter name
+        Collections.sort(this.filterMappings, (f1, f2) -> {
+            int cmp = f1.filterName.compareTo(f2.filterName);
+            if (cmp == 0) {
+                cmp = f1.compareTo(f2);
+            }
+            return cmp;
+        });
+
+        this.initialized = true;
 
     }
 
     public void destroy() {
+        this.filterMappings.forEach(mapping -> {
+            try {
+                mapping.filter.destroy();
+            } catch (Exception e) {
+                logger.error("destroy filter '" + mapping.filter + "' failed.", e);
+            }
+        });
+
+        this.servletMappings.forEach(mapping -> {
+            try {
+                mapping.servlet.destroy();
+            } catch (Exception e) {
+                logger.error("destroy servlet '" + mapping.servlet + "' failed.", e);
+            }
+        });
+
+        this.invokeServletContextDestroyed();
 
     }
 
