@@ -106,9 +106,9 @@ public class ServletContextImpl implements ServletContext {
     public ServletContextImpl(ClassLoader classLoader, Config config, String webRoot) {
         this.classLoader = classLoader; // Q
         this.config = config;
-        this.sessionCookieConfig = new SessionCookieConfig(config); // Q
+        this.sessionCookieConfig = new SessionCookieConfigIml(config); // Q
         this.webRoot = Paths.get(webRoot).normalize().toAbsolutePath();
-        this.sessionManager = new SessionManager(this, config.server().webApp().sessionTimeout());
+        this.sessionManager = new SessionManager(this, config.server.webApp.sessionTimeout);
         logger.info("set web root: {}", this.webRoot);
     }
 
@@ -331,7 +331,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getMimeType(String file) {
-        return config.server().getMimeType(file);
+        return config.server.getMimeType(file);
     }
 
     @Override
@@ -417,7 +417,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServerInfo() {
-        return this.config.server().name();
+        return this.config.server.name;
     }
 
     @Override
@@ -467,7 +467,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServletContextName() {
-        return this.config.server().webApp().name();
+        return this.config.server.webApp.name;
     }
 
     @Override
@@ -716,7 +716,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getVirtualServerName() {
-        return this.config.server().webApp().virtualServerName();
+        return this.config.server.webApp.virtualServerName;
     }
 
     @Override
@@ -726,12 +726,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void setSessionTimeout(int sessionTimeout) {
-        return this.config.server().webApp().sessionTimeout();
+        this.config.server.webApp.sessionTimeout = sessionTimeout;
     }
 
     @Override
     public String getRequestCharacterEncoding() {
-        return this.config.server().requestEncoding();
+        return this.config.server.requestEncoding;
     }
 
     @Override
@@ -743,7 +743,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getResponseCharacterEncoding() {
-        return this.config.server().responseEncoding();
+        return this.config.server.responseEncoding;
     }
 
     @Override
@@ -841,7 +841,7 @@ public class ServletContextImpl implements ServletContext {
             }
         }
 
-        if (defaultServlet == null && config.server().webApp().fileListings()) {
+        if (defaultServlet == null && config.server.webApp.fileListings) {
             logger.info("no default servlet. auto register {}...", DefaultServlet.class.getName());
             defaultServlet = new DefaultServlet();
             try {

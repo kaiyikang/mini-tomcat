@@ -1,47 +1,46 @@
-package com.kaiyikang.minitomcat;
+package com.itranswarp.jerrymouse;
 
 import java.util.Map;
 
-public record Config(Server server) {
-    public record Server(
-            String host,
-            int port,
-            int backlog,
-            String requestEncoding,
-            String responseEncoding,
-            String name,
-            String mimeDefault,
-            int threadPoolSize,
-            boolean enableVirtualThread,
-            Map<String, String> mimeTypes,
-            WebApp webApp,
-            ForwardedHeaders forwardedHeaders) {
+public class Config {
+
+    public Server server;
+
+    public static class Server {
+        public String host;
+        public Integer port;
+        public Integer backlog;
+        public String requestEncoding;
+        public String responseEncoding;
+        public String name;
+        public String mimeDefault;
+        public int threadPoolSize;
+        public boolean enableVirtualThread;
+        public Map<String, String> mimeTypes;
+        public WebApp webApp;
+        public ForwardedHeaders forwardedHeaders;
 
         public String getMimeType(String url) {
-            if (url == null) {
-                return this.mimeDefault;
-            }
             int n = url.lastIndexOf('.');
             if (n < 0) {
                 return this.mimeDefault;
             }
             String ext = url.substring(n).toLowerCase();
-            return Map.copyOf(this.mimeTypes).getOrDefault(ext, this.mimeDefault);
+            return this.mimeTypes.getOrDefault(ext, this.mimeDefault);
+        }
+
+        public static class WebApp {
+            public String name;
+            public boolean fileListings;
+            public String virtualServerName;
+            public String sessionCookieName;
+            public Integer sessionTimeout;
+        }
+
+        public static class ForwardedHeaders {
+            public String forwardedProto;
+            public String forwardedHost;
+            public String forwardedFor;
         }
     }
-
-    public record WebApp(
-            String name,
-            boolean fileListings,
-            String virtualServerName,
-            String sessionCookieName,
-            Integer sessionTimeout) {
-    }
-
-    public record ForwardedHeaders(
-            String forwardedProto,
-            String forwardedHost,
-            String forwardedFor) {
-    }
-
 }
