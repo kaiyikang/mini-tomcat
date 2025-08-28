@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -16,6 +17,27 @@ import jakarta.servlet.http.Cookie;
 public class HttpUtils {
 
     static final Pattern QUERY_SPLIT = Pattern.compile("\\&");
+    public static final Locale DEFAULT_LOCALE = Locale.getDefault();
+    public static final List<Locale> DEFAULT_LOCALES = List.of(DEFAULT_LOCALE);
+
+    public static List<Locale> parseLocales(String acceptLangauge) {
+        // The example of parser:
+        // Accept-Language: zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7
+        String[] ss = acceptLangauge.split(",");
+        List<Locale> locales = new ArrayList<>(ss.length);
+        for (String s : ss) {
+            int n = s.indexOf(';');
+            String name = n < 0 ? s : s.substring(0, n);
+            int m = name.indexOf('-');
+            if (m < 0) {
+                locales.add(Locale.of(name));
+            } else {
+                locales.add(Locale.of(name.substring(0, m), name.substring(m + 1)));
+            }
+        }
+        return locales.isEmpty() ? DEFAULT_LOCALES : locales;
+
+    }
 
     public static Map<String, List<String>> parseQuery(String query, Charset charSet) {
 

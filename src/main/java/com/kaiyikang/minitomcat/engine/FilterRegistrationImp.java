@@ -47,7 +47,7 @@ public class FilterRegistrationImp implements Dynamic {
 
             @Override
             public String getInitParameter(String name) {
-                return FilterRegistrationImp.this.initParameters.getInitParamer(name);
+                return FilterRegistrationImp.this.initParameters.getInitParameter(name);
             }
 
             @Override
@@ -107,7 +107,7 @@ public class FilterRegistrationImp implements Dynamic {
 
     @Override
     public String getInitParameter(String name) {
-        return this.initParameters.getInitParamer(name);
+        return this.initParameters.getInitParameter(name);
     }
 
     @Override

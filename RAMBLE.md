@@ -1,3 +1,11 @@
+Date 2025.08.27
+
+Sometimes, blindly copying code can cloud your mind, leading to a state of "completing tasks just for the sake of completion." To avoid this, I must actively strive to understand the code after finishing the coding portion. Adding comments forces me to actively think about the code's meaning and its execution logic.
+
+Additionally, when setting specific project goals, focus shouldn't be solely on the code itself. The time allocated to understanding the code should even exceed that spent on writing it—for example, 40% for coding and 60% for comprehension.
+
+The code itself isn't the end goal; the specific implementation methods and underlying principles are what truly matter.
+
 Date 2025.08.25
 
 To be honest, I haven't acquired the kind of knowledge I initially envisioned through this process – that is, a flexible mastery of Java's fundamental and related libraries. However, I have certainly gained some impressions, which manifest as functional blocks, or perhaps code blocks.

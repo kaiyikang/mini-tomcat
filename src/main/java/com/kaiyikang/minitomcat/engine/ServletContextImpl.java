@@ -106,7 +106,7 @@ public class ServletContextImpl implements ServletContext {
     public ServletContextImpl(ClassLoader classLoader, Config config, String webRoot) {
         this.classLoader = classLoader; // Q
         this.config = config;
-        this.sessionCookieConfig = new SessionCookieConfigIml(config); // Q
+        this.sessionCookieConfig = new SessionCookieConfigImpl(config); // Q
         this.webRoot = Paths.get(webRoot).normalize().toAbsolutePath();
         this.sessionManager = new SessionManager(this, config.server.webApp.sessionTimeout);
         logger.info("set web root: {}", this.webRoot);

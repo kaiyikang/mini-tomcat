@@ -1,6 +1,8 @@
 package com.kaiyikang.minitomcat.engine;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.kaiyikang.minitomcat.Config;
 import com.kaiyikang.minitomcat.engine.support.Attributes;
@@ -15,6 +17,7 @@ public class SessionCookieConfigImpl implements SessionCookieConfig {
     boolean httpOnly = true;
     boolean secure = false;
     String domain;
+    // Browser will match the url path and this.path of cookie
     String path;
 
     public SessionCookieConfigImpl(Config config) {
@@ -29,98 +32,88 @@ public class SessionCookieConfigImpl implements SessionCookieConfig {
 
     @Override
     public String getName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getName'");
+        return config.server.webApp.sessionCookieName;
     }
 
     @Override
     public void setDomain(String domain) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setDomain'");
+        this.domain = domain;
     }
 
     @Override
     public String getDomain() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getDomain'");
+        return this.domain;
     }
 
     @Override
     public void setPath(String path) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setPath'");
+        this.path = path;
     }
 
     @Override
     public String getPath() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPath'");
+        return this.path;
     }
 
     @Override
     public void setComment(String comment) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setComment'");
+        // ignore
     }
 
     @Override
     public String getComment() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getComment'");
+        return null;
     }
 
     @Override
     public void setHttpOnly(boolean httpOnly) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setHttpOnly'");
+        this.httpOnly = httpOnly;
     }
 
     @Override
     public boolean isHttpOnly() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isHttpOnly'");
+        return this.httpOnly;
     }
 
     @Override
     public void setSecure(boolean secure) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setSecure'");
+        this.secure = secure;
     }
 
     @Override
     public boolean isSecure() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'isSecure'");
+        return this.secure;
     }
 
     @Override
     public void setMaxAge(int maxAge) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setMaxAge'");
+        this.maxAge = maxAge;
     }
 
     @Override
     public int getMaxAge() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getMaxAge'");
+        return this.maxAge;
     }
 
     @Override
     public void setAttribute(String name, String value) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setAttribute'");
+        this.attributes.setAttribute(name, value);
     }
 
     @Override
     public String getAttribute(String name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAttribute'");
+        return (String) this.attributes.getAttribute(name);
     }
 
     @Override
     public Map<String, String> getAttributes() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAttributes'");
+        Map<String, Object> rawAttributes = this.attributes.getAttributes();
+        Map<String, String> stringAttributes = rawAttributes.entrySet().stream()
+                .filter(entry -> entry.getValue() instanceof String)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> (String) entry.getValue()));
+        return stringAttributes;
     }
 
 }

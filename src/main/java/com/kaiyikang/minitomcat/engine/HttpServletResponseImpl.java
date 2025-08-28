@@ -293,7 +293,4 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             throw new IllegalStateException("Response is committed.");
         }
     }
-
-    // ========= Not implement yet =========
-
 }

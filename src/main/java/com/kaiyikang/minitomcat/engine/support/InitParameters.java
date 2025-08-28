@@ -26,7 +26,7 @@ public class InitParameters extends LazyMap<String> {
         return true;
     }
 
-    public String getInitParamer(String name) {
+    public String getInitParameter(String name) {
         return super.get(name);
     }
 
