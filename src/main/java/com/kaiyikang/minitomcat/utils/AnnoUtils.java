@@ -64,7 +64,7 @@ public class AnnoUtils {
         return arraysToSet(w.value(), w.urlPatterns()).toArray(String[]::new);
     }
 
-    public static EnumSet<DispatcherType> getFilDispatcherTypes(Class<? extends Filter> filterClass) {
+    public static EnumSet<DispatcherType> getFilterDispatcherTypes(Class<? extends Filter> filterClass) {
         WebFilter w = filterClass.getAnnotation(WebFilter.class);
         if (w == null) {
             return EnumSet.of(DispatcherType.REQUEST);

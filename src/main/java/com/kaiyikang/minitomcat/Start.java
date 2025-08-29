@@ -83,7 +83,7 @@ public class Start {
         Path warPath = parseWarFile(warFile);
 
         Path[] ps = extractWarIfNecessary(warPath);// { classesPath, libPath }
-        String webRoot = ps[0].getParent().toString();
+        String webRoot = ps[0].getParent().getParent().toString();
         logger.info("set web root: {}", webRoot);
 
         // Load Default- and Custom Configs
@@ -169,11 +169,11 @@ public class Start {
         List<Class<?>> autoScannedClasses = new ArrayList<>(classSet);
 
         // Create a executor to execute the class
-        if (config.server().enableVirtualThread()) {
+        if (config.server.enableVirtualThread) {
             logger.info("Virtual thread is enabled.");
         }
-        ExecutorService executor = config.server().enableVirtualThread() ? Executors.newVirtualThreadPerTaskExecutor()
-                : new ThreadPoolExecutor(0, config.server().threadPoolSize(), 0L, TimeUnit.MILLISECONDS,
+        ExecutorService executor = config.server.enableVirtualThread ? Executors.newVirtualThreadPerTaskExecutor()
+                : new ThreadPoolExecutor(0, config.server.threadPoolSize, 0L, TimeUnit.MILLISECONDS,
                         new LinkedBlockingDeque<>());
 
         // Start the server

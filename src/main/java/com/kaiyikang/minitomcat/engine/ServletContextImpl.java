@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.kaiyikang.minitomcat.engine.mapping.ServletMapping;
+import com.kaiyikang.minitomcat.engine.servlet.DefaultServlet;
 import com.kaiyikang.minitomcat.engine.support.Attributes;
 import com.kaiyikang.minitomcat.Config;
 import com.kaiyikang.minitomcat.engine.mapping.FilterMapping;

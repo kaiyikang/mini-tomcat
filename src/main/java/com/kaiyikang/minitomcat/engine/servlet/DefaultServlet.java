@@ -62,7 +62,6 @@ public class DefaultServlet extends HttpServlet {
 
         String realPath = req.getServletContext().getRealPath(uri);
         Path path = Paths.get(realPath);
-        logger.debug("try access path", path);
 
         if (Files.isDirectory(path)) {
             // Is a Dir but not end with /
@@ -72,6 +71,7 @@ public class DefaultServlet extends HttpServlet {
             }
 
             List<Path> files = Files.list(path).collect(Collectors.toList());
+
             Collections.sort(files, (f1, f2) -> {
                 var s1 = f1.toString();
                 var s2 = f2.toString();
@@ -83,6 +83,7 @@ public class DefaultServlet extends HttpServlet {
             if (!uri.equals("/")) {
                 sb.append(tr(path.getParent(), -1, ".."));
             }
+
             // Load all files under the path
             for (Path file : files) {
                 String name = file.getFileName().toString();
@@ -97,7 +98,7 @@ public class DefaultServlet extends HttpServlet {
 
             // Render it
             String trs = sb.toString();
-            String html = this.indexTemplate.replace("${URL}", HtmlUtils.encodeHtml(uri))
+            String html = this.indexTemplate.replace("${URI}", HtmlUtils.encodeHtml(uri))
                     .replace("${SERVER}", getServletContext().getServerInfo())
                     .replace("${TRS}", trs);
             PrintWriter pw = resp.getWriter();
