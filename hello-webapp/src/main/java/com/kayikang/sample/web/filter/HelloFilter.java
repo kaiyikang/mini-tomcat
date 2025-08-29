@@ -21,7 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class HelloFilter implements Filter {
     Logger logger = LoggerFactory.getLogger(getClass());
 
-    Set<String> names = Set.of("Bob", "Alice", "Tom", "Jerry");
+    Set<String> names = Set.of("Bob", "Alice", "Kang");
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
