@@ -50,6 +50,9 @@ public class Start {
 
     static Logger logger = org.slf4j.LoggerFactory.getLogger(Start.class);
 
+    /*
+     * Parsing commands and Start the server.
+     */
     public static void main(String[] args) throws Exception {
         // Parser the var
         String warFile = null;
@@ -88,41 +91,10 @@ public class Start {
 
         // Load Default- and Custom Configs
         String defaultConfigYaml = ClassPathUtils.readString("/server.yml");
-        String customConfigYaml = null;
-        if (customConfigPath != null) {
-            logger.info("load external config {}...", customConfigPath);
-            try {
-                customConfigYaml = Files.readString(Paths.get(customConfigPath), StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                logger.error("Could not read config: " + customConfigPath, e);
-                System.exit(1);
-                return;
-            }
-        }
+        String customConfigYaml = loadCustomConfigYaml(customConfigPath);
 
         // Setup Configs
-        Config config;
-        Config customConfig;
-        try {
-            config = loadConfig(defaultConfigYaml);
-        } catch (JacksonException e) {
-            logger.error("parse default config failed.", e);
-            throw new RuntimeException(e);
-        }
-        if (customConfigYaml != null) {
-            try {
-                customConfig = loadConfig(customConfigYaml);
-            } catch (JacksonException e) {
-                logger.error("Parse custom config failed:" + customConfigPath, e);
-                throw new RuntimeException(e);
-            }
-
-            try {
-                merge(config, customConfig);
-            } catch (ReflectiveOperationException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        Config config = setupConfig(defaultConfigYaml, customConfigYaml);
 
         // Set classLoader
         var classLoader = new WebAppClassLoader(ps[0], ps[1]);
@@ -273,6 +245,52 @@ public class Start {
                 .setPropertyNamingStrategy(PropertyNamingStrategies.KEBAB_CASE)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return objectMapper.readValue(config, Config.class);
+    }
+
+    private Config setupConfig(final String defaultConfigYaml, final String customConfigYaml) {
+
+        Config config;
+        Config customConfig;
+
+        try {
+            config = loadConfig(defaultConfigYaml);
+        } catch (JacksonException e) {
+            logger.error("parse default config failed.", e);
+            throw new RuntimeException(e);
+        }
+        if (customConfigYaml != null) {
+            try {
+                customConfig = loadConfig(customConfigYaml);
+            } catch (JacksonException e) {
+                logger.error("Parse custom config failed.", e);
+                throw new RuntimeException(e);
+            }
+
+            try {
+                merge(config, customConfig);
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return config;
+    }
+
+    private String loadCustomConfigYaml(final String customConfigPath) {
+
+        if (customConfigPath == null) {
+            return null;
+        }
+
+        String customConfigYaml = null;
+        logger.info("load external config {}...", customConfigPath);
+        try {
+            customConfigYaml = Files.readString(Paths.get(customConfigPath), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            logger.error("Could not read config: " + customConfigPath, e);
+            System.exit(1);
+        }
+
+        return customConfigYaml;
     }
 
     static void merge(Object source, Object override) throws ReflectiveOperationException {
