@@ -94,7 +94,7 @@ public class ServletContextImpl implements ServletContext {
     final List<ServletMapping> servletMappings = new ArrayList<>();
     final List<FilterMapping> filterMappings = new ArrayList<>();
 
-    Servlet defaultServlet; // Q
+    Servlet defaultServlet;
 
     // Listener
     private List<ServletContextListener> servletContextListeners = null;
@@ -105,7 +105,7 @@ public class ServletContextImpl implements ServletContext {
     private List<HttpSessionAttributeListener> httpSessionAttributeListeners = null;
 
     public ServletContextImpl(ClassLoader classLoader, Config config, String webRoot) {
-        this.classLoader = classLoader; // Q
+        this.classLoader = classLoader;
         this.config = config;
         this.sessionCookieConfig = new SessionCookieConfigImpl(config); // Q
         this.webRoot = Paths.get(webRoot).normalize().toAbsolutePath();

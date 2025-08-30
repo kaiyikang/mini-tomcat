@@ -42,14 +42,13 @@ public class HttpConnector implements HttpHandler, AutoCloseable {
         this.classLoader = classloader;
 
         // Init servlet context
-
         Thread.currentThread().setContextClassLoader(this.classLoader);
         ServletContextImpl ctx = new ServletContextImpl(classloader, config, webRoot);
         ctx.initialize(autoScannedClasses);
         this.servletContext = ctx;
         Thread.currentThread().setContextClassLoader(null);
 
-        // Start http server
+        // Start http server to listen
         this.httpServer = HttpServer.create(new InetSocketAddress(host, port), config.server.backlog,
                 "/", this);
         this.httpServer.setExecutor(executor);

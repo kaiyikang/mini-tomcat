@@ -41,6 +41,10 @@ public class WebAppClassLoader extends URLClassLoader {
         scanClassPath0(handler, this.classPath, this.classPath);
     }
 
+    /*
+     * The active scanning mechanism traverses the classpath and JAR packages of the
+     * web application to locate all .class files.
+     */
     private void scanClassPath0(Consumer<Resource> handler, Path basePath, Path path) {
         try {
             Files.list(path)
@@ -77,9 +81,16 @@ public class WebAppClassLoader extends URLClassLoader {
                     String name = entry.getName();
                     handler.accept(new Resource(jarPath, name));
                 });
+        jarFile.close();
     }
 
-    // Utils
+    /*
+     * It converts the classPath (typically the path to the WEB-INF/classes
+     * directory) into a URL.
+     * Converts all JAR files under the libPath (typically the path to the
+     * WEB-INF/lib directory) into URLs.
+     * Collects these URLs into a URL[] array.
+     */
     static URL[] createUrls(Path classPath, Path libPath) throws IOException {
         List<URL> urls = new ArrayList<>();
         urls.add(toDirURL(classPath));

@@ -277,7 +277,7 @@ In summary, specific server-side logic triggers a notification function. This fu
 
 ## Web App
 
-根据规范，之前所提到的组件，Servlet、Filter 和 Listener 等，均应该按照规范打包为 war 文件，Web 服务器会加载文件。规范的范例如下：
+According to the specifications, components such as Servlets, Filters, and Listeners should all be packaged into a WAR (Web Application Archive) file. The Web server then loads this file. A typical example of this specification is as follows:
 
 ```
 hello-webapp
@@ -303,11 +303,9 @@ hello-webapp
 └── favicon.ico
 ```
 
-## Temp Question
+We need to configure essential information in a YAML file, such as the host and necessary web application details. During the `Start` phase, this YAML configuration is mapped into a `Config` POJO. Subsequently, the program scans the WAR file and loads all class files. Through annotations, it distinguishes whether a class is a Filter, a Listener, or a Servlet.
 
-### How to handle war file?
-
-### How do we get autoScannedClasses?
+All loaded class files are then provided to `ServletContextImpl` for initialization. It's crucial to note that all class loading should be based on the WAR file, not through other means. Therefore, it's necessary to explicitly set `Thread.currentThread().setContextClassLoader(this.classLoader);` to avoid issues related to the [Parent Delegation Mechanism](https://stackoverflow.com/questions/2642606/java-classloader-delegation-model).
 
 ## Milestone
 
