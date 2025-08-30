@@ -21,8 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.jar.JarFile;
 
-import javax.management.RuntimeErrorException;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -51,7 +49,7 @@ public class Start {
     static Logger logger = org.slf4j.LoggerFactory.getLogger(Start.class);
 
     /*
-     * Parsing commands and Start the server.
+     * Parsing commands and Start the server. "commons-cli" is a choice.
      */
     public static void main(String[] args) throws Exception {
         // Parser the var
@@ -82,6 +80,10 @@ public class Start {
         new Start().start(warFile, customConfigPath); // Q
     }
 
+    /*
+     * This method loads the configuration, scans and loads all web-related content
+     * within the WAR file, and then passes the customized content to the connector.
+     */
     private void start(String warFile, String customConfigPath) throws IOException {
         Path warPath = parseWarFile(warFile);
 
@@ -100,7 +102,10 @@ public class Start {
         var classLoader = new WebAppClassLoader(ps[0], ps[1]);
         Set<Class<?>> classSet = new HashSet<>();
 
-        // Scan and load classes
+        // Define handler to load scanned classes and libs
+        // This approach utilizes the handler method, focusing solely on how to handle
+        // the resource—that is, determining the appropriate actions for this specific
+        // resource—without addressing any logic outside of the resource itself.
         Consumer<Resource> handler = (r) -> {
             if (r.name().endsWith(".class")) {
                 // Scan classes
@@ -108,6 +113,8 @@ public class Start {
                 if (className.endsWith("module-info") || className.endsWith("package-info")) {
                     return;
                 }
+
+                // Load classes
                 Class<?> clazz;
                 try {
                     clazz = classLoader.loadClass(className);
@@ -120,7 +127,8 @@ public class Start {
                             err.getMessage());
                     return;
                 }
-                // Load classes
+
+                // Determine Type of class
                 if (clazz.isAnnotationPresent(WebServlet.class)) {
                     logger.info("Found @WebServlet: {}", clazz.getName());
                     classSet.add(clazz);
@@ -138,11 +146,14 @@ public class Start {
 
         classLoader.scanClassPath(handler);
         classLoader.scanJar(handler);
+
         List<Class<?>> autoScannedClasses = new ArrayList<>(classSet);
 
         // Create a executor to execute the class
         if (config.server.enableVirtualThread) {
             logger.info("Virtual thread is enabled.");
+        } else {
+            logger.info("Virtual thread is disabled.");
         }
         ExecutorService executor = config.server.enableVirtualThread ? Executors.newVirtualThreadPerTaskExecutor()
                 : new ThreadPoolExecutor(0, config.server.threadPoolSize, 0L, TimeUnit.MILLISECONDS,
