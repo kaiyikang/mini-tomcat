@@ -95,59 +95,14 @@ public class Start {
         String defaultConfigYaml = ClassPathUtils.readString("/server.yml");
         String customConfigYaml = loadCustomConfigYaml(customConfigPath);
 
-        // Setup Configs
+        // Setup Configs by
         Config config = setupConfig(defaultConfigYaml, customConfigYaml);
 
         // Set classLoader
         var classLoader = new WebAppClassLoader(ps[0], ps[1]);
-        Set<Class<?>> classSet = new HashSet<>();
 
-        // Define handler to load scanned classes and libs
-        // This approach utilizes the handler method, focusing solely on how to handle
-        // the resource—that is, determining the appropriate actions for this specific
-        // resource—without addressing any logic outside of the resource itself.
-        Consumer<Resource> handler = (r) -> {
-            if (r.name().endsWith(".class")) {
-                // Scan classes
-                String className = r.name().substring(0, r.name().length() - 6).replace('/', '.');
-                if (className.endsWith("module-info") || className.endsWith("package-info")) {
-                    return;
-                }
-
-                // Load classes
-                Class<?> clazz;
-                try {
-                    clazz = classLoader.loadClass(className);
-                } catch (ClassNotFoundException e) {
-                    logger.warn("load class '{} failed: {}: {}'", className, e.getClass().getSimpleName(),
-                            e.getMessage());
-                    return;
-                } catch (NoClassDefFoundError err) {
-                    logger.error("load class '{}' failed: {}: {}", className, err.getClass().getSimpleName(),
-                            err.getMessage());
-                    return;
-                }
-
-                // Determine Type of class
-                if (clazz.isAnnotationPresent(WebServlet.class)) {
-                    logger.info("Found @WebServlet: {}", clazz.getName());
-                    classSet.add(clazz);
-                }
-                if (clazz.isAnnotationPresent(WebFilter.class)) {
-                    logger.info("Found @WebFilter: {}", clazz.getName());
-                    classSet.add(clazz);
-                }
-                if (clazz.isAnnotationPresent(WebListener.class)) {
-                    logger.info("Found @WebFilter: {}", clazz.getName());
-                    classSet.add(clazz);
-                }
-            }
-        };
-
-        classLoader.scanClassPath(handler);
-        classLoader.scanJar(handler);
-
-        List<Class<?>> autoScannedClasses = new ArrayList<>(classSet);
+        // Scan the classes
+        List<Class<?>> autoScannedClasses = scanClasses(classLoader);
 
         // Create a executor to execute the class
         if (config.server.enableVirtualThread) {
@@ -174,7 +129,12 @@ public class Start {
         logger.info("mini-tomcat http server was shutdown.");
     }
 
+    /*
+     * If the WAR file does not exist, create the path; otherwise, extract the WAR
+     * file to a temporary folder. Use JarFile for extraction.
+     */
     private Path[] extractWarIfNecessary(Path warPath) throws IOException {
+
         if (Files.isDirectory(warPath)) {
             logger.info("war is directory: {},", warPath);
             Path classesPath = warPath.resolve("WEB-INF/classes");
@@ -284,6 +244,59 @@ public class Start {
             }
         }
         return config;
+    }
+
+    /*
+     * Define handler to load scanned classes and libs. This approach utilizes the
+     * handler method, focusing solely on how to handle the resource—that is,
+     * determining the appropriate actions for this specific resource—without
+     * addressing any logic outside of the resource itself.
+     */
+    private List<Class<?>> scanClasses(WebAppClassLoader classLoader) {
+        Set<Class<?>> classSet = new HashSet<>();
+
+        Consumer<Resource> handler = (r) -> {
+            if (r.name().endsWith(".class")) {
+                // Scan classes
+                String className = r.name().substring(0, r.name().length() - 6).replace('/', '.');
+                if (className.endsWith("module-info") || className.endsWith("package-info")) {
+                    return;
+                }
+
+                // Load classes
+                Class<?> clazz;
+                try {
+                    clazz = classLoader.loadClass(className);
+                } catch (ClassNotFoundException e) {
+                    logger.warn("load class '{} failed: {}: {}'", className, e.getClass().getSimpleName(),
+                            e.getMessage());
+                    return;
+                } catch (NoClassDefFoundError err) {
+                    logger.error("load class '{}' failed: {}: {}", className, err.getClass().getSimpleName(),
+                            err.getMessage());
+                    return;
+                }
+
+                // Determine Type of class
+                if (clazz.isAnnotationPresent(WebServlet.class)) {
+                    logger.info("Found @WebServlet: {}", clazz.getName());
+                    classSet.add(clazz);
+                }
+                if (clazz.isAnnotationPresent(WebFilter.class)) {
+                    logger.info("Found @WebFilter: {}", clazz.getName());
+                    classSet.add(clazz);
+                }
+                if (clazz.isAnnotationPresent(WebListener.class)) {
+                    logger.info("Found @WebFilter: {}", clazz.getName());
+                    classSet.add(clazz);
+                }
+            }
+        };
+
+        classLoader.scanClassPath(handler);
+        classLoader.scanJar(handler);
+
+        return new ArrayList<>(classSet);
     }
 
     private String loadCustomConfigYaml(final String customConfigPath) {
