@@ -42,7 +42,7 @@ public class LoginServlet extends HttpServlet {
             pw.close();
         } else {
             req.getSession().setAttribute("username", username);
-            resp.sendRedirect("/");
+            resp.sendRedirect("/index");
         }
     }
 }

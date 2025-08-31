@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-@WebServlet(urlPatterns = "/")
+@WebServlet(urlPatterns = "/index")
 public class IndexServlet extends HttpServlet {
 
     @Override

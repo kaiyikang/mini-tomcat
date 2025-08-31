@@ -1,14 +1,12 @@
 # Mini Tomcat
 
-[Resource](https://liaoxuefeng.com/books/jerrymouse/introduction/index.html)
-
-All diagram come from this tutorial resource.
+The original tutorial for this project is ["jerrymouse"](https://liaoxuefeng.com/books/jerrymouse/introduction/index.html). I appreciate the original author's dedication.
 
 ## What is the main objective of this mini Tomcat?
 
 The primary objective of this mini-Tomcat is to deconstruct how a popular web server operates, enabling me to apply this foundational knowledge to other web servers and similar projects. At the same time, I aim to gain a solid grasp of core concepts like Servlets or Filters. Furthermore, implementing the specific details provides and excellent opportunity to enhance my practical Java skills and learn advanced techniques or patterns that are often missed in typical self-directed or AI-driven coding.
 
-## Targeted Features
+## Features
 
 - Support most features of Servlet 6
   - ✅ Servlet Components
@@ -16,8 +14,7 @@ The primary objective of this mini-Tomcat is to deconstruct how a popular web se
   - ✅ Listener Components
   - ✅ Session (Cookie only)
   - ❌ JSP
-  - ❌ Async and WebSocket.
-- ✅ Deployable standard Web App
+  - ❌ Async and WebSocket
 - ❌ Deploying multiple Web Apps at the same time
 - ❌ Hot deployment
 
