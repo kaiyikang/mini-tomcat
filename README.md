@@ -309,8 +309,8 @@ All loaded class files are then provided to `ServletContextImpl` for initializat
 1. SimpleHttpServer done
 2. ServletServer 2025.08.08 done
 3. Servlet Module
-  3.1. Servlet Context 2025.08.11 done
-  3.2. FilterChain 2025.08.14 done
-  3.3. HttpSession 2025.08.18 done
-  3.4. Listener 2025.08.23 done
+3.1. Servlet Context 2025.08.11 done
+3.2. FilterChain 2025.08.14 done
+3.3. HttpSession 2025.08.18 done
+3.4. Listener 2025.08.23 done
 4. WebApp 2025.08.30 done
