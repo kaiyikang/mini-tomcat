@@ -33,7 +33,6 @@ import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.kaiyikang.minitomcat.classloader.Resource;
 import com.kaiyikang.minitomcat.classloader.WebAppClassLoader;

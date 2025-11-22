@@ -16,7 +16,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.HashMap;
@@ -36,7 +35,6 @@ import com.kaiyikang.minitomcat.engine.mapping.FilterMapping;
 
 import com.kaiyikang.minitomcat.utils.AnnoUtils;
 
-import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterRegistration;

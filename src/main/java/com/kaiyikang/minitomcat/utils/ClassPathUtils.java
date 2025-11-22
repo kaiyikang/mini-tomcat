@@ -2,8 +2,6 @@ package com.kaiyikang.minitomcat.utils;
 
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.util.ClassUtil;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
